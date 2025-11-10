@@ -1,3 +1,5 @@
+// app/(tabs)/_layout.tsx
+
 import { Tabs } from 'expo-router';
 import React from 'react';
 
@@ -15,14 +17,19 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
-      }}>
+      }}
+      // 🚨 ¡CLAVE DE LA SOLUCIÓN SIN RENOMBRAR!: FUERZA A CARGAR homeScreen
+      initialRouteName="homeScreen"
+    >
+
       <Tabs.Screen
-        name="index"
+        name="homeScreen" // DEBE coincidir con el nombre de tu archivo (homeScreen.js)
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
+
       <Tabs.Screen
         name="explore"
         options={{
@@ -30,6 +37,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />
+
     </Tabs>
   );
 }
