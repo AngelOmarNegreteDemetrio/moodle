@@ -8,13 +8,16 @@ export default function LoginScreen() {
   const router = useRouter();
 
   const handleSignIn = () => {
+    // 1. Validación de campos vacíos
     if (usuario.trim() === '' || password.trim() === '') {
       Alert.alert('Error', 'Por favor ingresa usuario y contraseña');
       return;
     }
 
+    // 2. Lógica de Validación (¡CRUCIAL! Debe ser admin/1234)
     if (usuario === 'admin' && password === '1234') {
-      router.push('/(tabs)');
+      // Navegación exitosa al grupo de pestañas
+      router.push('/(tabs)/homeScreen');
     } else {
       Alert.alert('Error', 'Usuario o contraseña incorrectos');
     }
@@ -24,6 +27,7 @@ export default function LoginScreen() {
     <View style={styles.outerContainer}>
       <View style={styles.card}>
 
+        {/* Logo de Hericraft (Imagen temporal) */}
         <Image
           style={styles.logo}
           source={{ uri: 'https://i.vimeocdn.com/video/1891854528-c4b262e781a0d0eac1ef5eac2785817f2c15eb1ea32fd505073cb59d31c45521-d?f=webp' }}
@@ -100,7 +104,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: '#333',
     padding: 12,
-    // ✨ APLICACIÓN DE MAYOR REDONDEZ
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ccc',
@@ -109,7 +112,6 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#0d6efd',
     padding: 15,
-    // ✨ APLICACIÓN DE MAYOR REDONDEZ
     borderRadius: 8,
     width: '100%',
     alignItems: 'center',

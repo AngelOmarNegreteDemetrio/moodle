@@ -1,29 +1,42 @@
 // app/_layout.tsx
 
 import { Stack } from 'expo-router';
+import React from 'react';
+
+// Si usas el tema/colores, mantén los imports
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function RootLayout() {
+  const colorScheme = useColorScheme();
+
   return (
-    <Stack>
-      {/* 1. La pantalla de login/index.js (la ruta '/') va primero */}
+    <Stack
+      screenOptions={{
+        headerShown: false, // Oculta el header por defecto
+        contentStyle: {
+            backgroundColor: Colors[colorScheme ?? 'light'].background,
+        }
+      }}>
+      
+      {/* 1. Ruta del Login (index.js). */}
       <Stack.Screen 
-        name="index" // Se refiere a app/index.js (tu Login)
-        options={{
-          headerShown: false, // Oculta la barra de título superior
-        }} 
+        name="index" 
+        options={{ headerShown: false }} 
       />
       
-      {/* 2. El grupo de pestañas se carga SÓLO después de iniciar sesión */}
+      {/* 2. Grupo de Pestañas. */}
       <Stack.Screen 
-        name="(tabs)" // Se refiere a la carpeta (tabs)
-        options={{ 
-          headerShown: false, 
-          // Aquí puedes añadir alguna transición personalizada si lo deseas
-        }} 
+        name="(tabs)" 
+        options={{ headerShown: false }} 
       />
       
-      {/* 3. Cualquier otra pantalla de navegación (como modal.tsx) */}
-      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      {/* 3. Otras rutas como modals, si existen */}
+      <Stack.Screen 
+        name="modal" 
+        options={{ presentation: 'modal' }} 
+      />
+
     </Stack>
   );
 }
