@@ -1,134 +1,84 @@
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Alert, Button, StyleSheet, Text, TextInput, View } from "react-native";
+import { LoginServices } from "../services/auth/LoginServices";
 
 export default function LoginScreen() {
-  const [usuario, setUsuario] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSignIn = () => {
-    // 1. Validación de campos vacíos
-    if (usuario.trim() === '' || password.trim() === '') {
-      Alert.alert('Error', 'Por favor ingresa usuario y contraseña');
+  const handleSignIn = async () => {
+    if (!username || !password) {
+      Alert.alert("Error", "Por favor ingresa usuario y contraseña.");
       return;
     }
 
-    // 2. Lógica de Validación (¡CRUCIAL! Debe ser admin/1234)
-    if (usuario === 'admin' && password === '1234') {
-      // Navegación exitosa al grupo de pestañas
-      router.push('/(tabs)/homeScreen');
-    } else {
-      Alert.alert('Error', 'Usuario o contraseña incorrectos');
+    setLoading(true);
+
+    try {
+      const authData = await LoginServices(username, password);
+      Alert.alert("✅ Login exitoso", `Bienvenido ${username}`);
+      
+      // Redirigir a la pantalla principal
+      // El token ya está guardado en AsyncStorage para usarlo después
+      router.push("/(tabs)/homeScreen");
+      
+    } catch (error) {
+      Alert.alert("Error de login", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={styles.outerContainer}>
-      <View style={styles.card}>
+    <View style={styles.container}>
+      <Text style={styles.title}>Inicio de Sesión Moodle</Text>
 
-        {/* Logo de Hericraft (Imagen temporal) */}
-        <Image
-          style={styles.logo}
-          source={{ uri: 'https://i.vimeocdn.com/video/1891854528-c4b262e781a0d0eac1ef5eac2785817f2c15eb1ea32fd505073cb59d31c45521-d?f=webp' }}
-        />
+      <TextInput
+        style={styles.input}
+        placeholder="Usuario"
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Contraseña"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
 
-        <Text style={styles.signInPrompt}>
-          Inicia sesión con tu cuenta
-        </Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Usuario"
-          placeholderTextColor="#666"
-          value={usuario}
-          onChangeText={setUsuario}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Contraseña"
-          placeholderTextColor="#666"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        <TouchableOpacity style={styles.button} onPress={handleSignIn}>
-          <Text style={styles.buttonText}>Log in</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.link}>
-          <Text style={styles.linkText}>Lost password?</Text>
-        </TouchableOpacity>
-
-      </View>
+      <Button
+        title={loading ? "Cargando..." : "Iniciar Sesión"}
+        onPress={handleSignIn}
+        disabled={loading}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  outerContainer: {
+  container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    justifyContent: "center",
+    padding: 20,
+    backgroundColor: "#fff",
   },
-  card: {
-    width: '100%',
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 30,
-
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 100,
-
-    borderRadius: 0,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  logo: {
-    width: 180,
-    height: 80,
-    resizeMode: 'contain',
-    marginBottom: 20,
-    alignSelf: 'center',
-  },
-  signInPrompt: {
-    fontSize: 16,
-    color: '#333',
+  title: {
+    fontSize: 22,
     marginBottom: 30,
-    alignSelf: 'flex-start',
+    textAlign: "center",
+    fontWeight: "bold",
+    color: "#d32f2f",
   },
   input: {
-    width: '100%',
-    backgroundColor: '#fff',
-    color: '#333',
-    padding: 12,
-    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
-    marginBottom: 15,
-  },
-  button: {
-    backgroundColor: '#0d6efd',
-    padding: 15,
+    borderColor: "#ccc",
     borderRadius: 8,
-    width: '100%',
-    alignItems: 'center',
-    marginTop: 5,
-    marginBottom: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  link: {
-    marginTop: 15,
-  },
-  linkText: {
-    color: '#0d6efd',
-    fontSize: 14,
-    fontWeight: '500',
+    padding: 12,
+    marginBottom: 15,
   },
 });
