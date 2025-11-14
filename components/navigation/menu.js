@@ -14,7 +14,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Entypo from '@expo/vector-icons/Entypo';
 
-/* --- DEFINICIONES Y CONSTANTES --- */
 const HEADER_HEIGHT = 70;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -124,9 +123,7 @@ export default function Header() {
     );
 }
 
-// ----------------------------------------------------
-// ESTILOS (Recuperados y necesarios para el Header)
-// ----------------------------------------------------
+
 
 const styles = StyleSheet.create({
 
@@ -142,8 +139,6 @@ const styles = StyleSheet.create({
         height: HEADER_HEIGHT,
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-        // Este padding debe ir en el SafeAreaView en HomeScreen si usas Expo-Router
-        // paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, 
         zIndex: 100,
         backgroundColor: COLLEGE_COLORS.PRIMARY_RED, // Se agrega color para que se vea
     },
@@ -167,7 +162,7 @@ const styles = StyleSheet.create({
     /* II. MENÚ DESPLEGABLE */
     menuOverlay: {
         position: 'absolute',
-        top: HEADER_HEIGHT, // Comienza debajo del header
+        top: HEADER_HEIGHT, 
         left: 0,
         right: 0,
         bottom: 0,
@@ -176,7 +171,6 @@ const styles = StyleSheet.create({
     },
     dropdownMenu: {
         position: 'absolute',
-        // Ajustamos la posición superior para que caiga justo por debajo del header
         top: 0,
         left: 10,
         width: SCREEN_WIDTH * 0.55,
