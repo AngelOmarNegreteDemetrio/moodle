@@ -1,92 +1,156 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import Feather from 'react-native-vector-icons/Feather';
-import { useRouter } from 'expo-router'; 
-import { COLLEGE_COLORS } from './constants/colors';
+import {
+    StyleSheet,
+    Text,
+    View,
+    TouchableOpacity,
+    Platform,
+    Dimensions,
+    StatusBar,
+    Alert,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Entypo from '@expo/vector-icons/Entypo';
 
-// Altura de la cabecera para calcular la posición del menú desplegable
-const HEADER_HEIGHT = 60; 
+const HEADER_HEIGHT = 70;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-export default function Menu() { 
+const COLLEGE_COLORS = {
+    PRIMARY_RED: '#E83E4C',
+    ACCENT_BLUE: '#49B6CC',
+    TEXT_DARK: '#333333',
+    TEXT_LIGHT: '#999999',
+    WHITE: '#FFFFFF',
+    LIGHT_GRAY: '#F5F5F5',
+    PROFILE_CIRCLE: '#DDDDDD',
+    BORDER_LIGHT: '#E0E0E0',
+};
+
+/* --- FUNCIÓN PRINCIPAL DEL COMPONENTE HEADER --- */
+
+export default function Header() {
     const router = useRouter();
-    // Estado para controlar la visibilidad del menú desplegable
-    const [isMenuVisible, setIsMenuVisible] = useState(false); 
-    
-    // Función que abre y cierra el menú
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
+
+  
+
     const handleToggleMenu = () => {
         setIsMenuVisible(!isMenuVisible);
     };
 
-    // Función para navegar al Login
-    const handleGoToLogin = () => {
+    const handleGoToLogin = async () => {
         setIsMenuVisible(false); // Cierra el menú
+
+        // FUNCIÓN DE LOGOUT: Limpia el token al navegar
+        await AsyncStorage.removeItem("moodleToken");
+        await AsyncStorage.removeItem("lastLoggedInUsername");
+
         router.push('/auth/Login'); // Navega a la ruta de Login
     };
 
+    const handleGoToNotifications = () => {
+        console.log("Navegar a Notificaciones");
+        // Aquí puedes agregar la lógica de navegación real, por ejemplo:
+        // router.push('/notifications');
+        Alert.alert("Notificaciones", "La vista de Notificaciones aún no está implementada.");
+    };
+
+    const handleGoToCourses = () => {
+        setIsMenuVisible(false);
+        console.log("Navegar a Mis Cursos");
+
+        router.push('/auth/course');
+    };
+
+     const handleGoToindex = () => {
+        setIsMenuVisible(false);
+        console.log("Navegar a Mis Cursos");
+
+        router.push('/');
+    }
+
     return (
-        // El Fragment permite devolver múltiples elementos
-        <> 
-            {/* I. HEADER - FONDO ROJO PRINCIPAL */}
-            <View style={[styles.header, { backgroundColor: COLLEGE_COLORS.PRIMARY_RED }]}>
-                {/* Botón de Hamburguesa que ahora alterna el estado */}
+        <View style={{ zIndex: 100 }}>
+            {/* I. BARRA DE ENCABEZADO */}
+            <View style={styles.header}>
                 <TouchableOpacity style={styles.menuButton} onPress={handleToggleMenu}>
-                    <Feather name="menu" size={24} color={COLLEGE_COLORS.WHITE} />
+                    <Text style={styles.headerIconText}><Entypo name="menu" size={34} color="white" /></Text>
                 </TouchableOpacity>
 
-                {/* Logo Central (Usando Text como placeholder de logo) */}
                 <Text style={styles.headerTitle}>college</Text>
 
-                {/* Botón de Notificaciones */}
-                <TouchableOpacity style={styles.notificationButton}>
-                    <Feather name="bell" size={24} color={COLLEGE_COLORS.WHITE} />
+                <TouchableOpacity style={styles.notificationButton} onPress={handleGoToNotifications}>
+                    <Text style={styles.headerIconText}><FontAwesome name="bell" size={24} color="white" /></Text>
                 </TouchableOpacity>
             </View>
 
             {/* II. MENÚ DESPLEGABLE (Flotante) */}
             {isMenuVisible && (
-                // El overlay táctil para cerrar el menú al tocar fuera
-                <TouchableOpacity 
-                    style={styles.menuOverlay} 
+                <TouchableOpacity
+                    style={styles.menuOverlay}
                     onPress={() => setIsMenuVisible(false)}
-                    activeOpacity={1} // Para que no haya efecto visual al presionar
+                    activeOpacity={1}
                 >
-                    {/* Contenedor real del menú */}
                     <View style={styles.dropdownMenu}>
-                        
-                        {/* Opción de Login */}
+
+                        {/* Opción 1: Logout (Cerrar Sesión) */}
                         <TouchableOpacity style={styles.menuItem} onPress={handleGoToLogin}>
-                            <Text style={styles.menuItemText}>Iniciar Sesión</Text>
-                            <Feather name="log-in" size={20} color="#333" />
+                            <Text style={styles.menuItemText}>
+                                Cerrar Sesión
+                            </Text>
+                            <Text style={styles.menuIconText}>
+                                🚪
+                            </Text>
                         </TouchableOpacity>
 
-                        {/* Aquí puedes añadir más opciones (Ej: Perfil, Configuración) */}
-                        <TouchableOpacity style={styles.menuItem} onPress={() => {/* otra acción */}}>
-                            <Text style={styles.menuItemText}>Perfil</Text>
-                            <Feather name="user" size={20} color="#333" />
+                        {/* Opción 2: Cursos */}
+                        <TouchableOpacity style={styles.menuItem} onPress={handleGoToCourses}>
+                            <Text style={styles.menuItemText}>Mis Cursos</Text>
+                            <Text style={styles.menuIconText}>📖</Text>
+                        </TouchableOpacity>
+                        {/* Opción 3: Inicio */}
+                        <TouchableOpacity style={styles.menuItem} onPress={handleGoToindex}>
+                            <Text style={styles.menuItemText}>Inicio</Text>
+                            <Text style={styles.menuIconText}>🏠</Text>
                         </TouchableOpacity>
 
                     </View>
                 </TouchableOpacity>
             )}
-        </>
+        </View>
     );
 }
 
-// ... (El StyleSheet se extiende para incluir los estilos del menú flotante)
+
+
 const styles = StyleSheet.create({
+
+    /* I. HEADER */
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        width: SCREEN_WIDTH,
+        marginHorizontal: 0,
         paddingHorizontal: 15,
+        paddingVertical: 10,
         height: HEADER_HEIGHT,
-        zIndex: 10, // Asegura que el header esté encima del contenido normal
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+        zIndex: 100,
+        backgroundColor: COLLEGE_COLORS.PRIMARY_RED, // Se agrega color para que se vea
     },
     headerTitle: {
+        fontSize: 24,
+        fontWeight: '800',
         color: COLLEGE_COLORS.WHITE,
+    },
+    headerIconText: {
         fontSize: 20,
-        fontWeight: 'bold',
+        color: COLLEGE_COLORS.WHITE,
+        lineHeight: 24,
     },
     menuButton: {
         padding: 5,
@@ -94,36 +158,34 @@ const styles = StyleSheet.create({
     notificationButton: {
         padding: 5,
     },
-    
-    // --- Estilos para el Menú Flotante ---
+
+    /* II. MENÚ DESPLEGABLE */
     menuOverlay: {
-        // Ocupa toda la pantalla para capturar toques fuera del menú
         position: 'absolute',
-        top: 0,
+        top: HEADER_HEIGHT, 
         left: 0,
         right: 0,
         bottom: 0,
-        // Un poco de transparencia para indicar que hay un overlay
-        backgroundColor: 'rgba(0, 0, 0, 0.1)', 
-        zIndex: 5, // Debe estar debajo del Header (zIndex: 10)
+        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+        zIndex: 99,
     },
     dropdownMenu: {
         position: 'absolute',
-        // Se posiciona justo debajo del botón de hamburguesa
-        top: HEADER_HEIGHT, 
-        left: 5, // Pequeño margen
-        width: SCREEN_WIDTH * 0.5, // Ancho del menú (50% de la pantalla)
+        top: 0,
+        left: 10,
+        width: SCREEN_WIDTH * 0.55,
         backgroundColor: COLLEGE_COLORS.WHITE,
-        borderRadius: 5,
+        borderRadius: 8,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-        paddingVertical: 10,
+        shadowRadius: 5,
+        elevation: 10,
+        paddingVertical: 5,
+        overflow: 'hidden',
     },
     menuItem: {
-        paddingVertical: 12,
+        paddingVertical: 14,
         paddingHorizontal: 15,
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -131,7 +193,11 @@ const styles = StyleSheet.create({
     },
     menuItemText: {
         fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
+        color: COLLEGE_COLORS.TEXT_DARK,
+        fontWeight: '600',
+    },
+    menuIconText: {
+        fontSize: 20,
+        color: COLLEGE_COLORS.TEXT_DARK,
     },
 });

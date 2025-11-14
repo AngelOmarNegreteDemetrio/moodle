@@ -5,7 +5,7 @@ const MOODLE_URL = "https://prueba.soluciones-hericraft.com";
 
 export async function LoginServices(username, password) {
     try {
-        // Solicitar token básico sin especificar servicio web
+        //  token basico de moodle
         const tokenResponse = await axios.post(
             `${MOODLE_URL}/login/token.php`,
             new URLSearchParams({
@@ -35,11 +35,11 @@ export async function LoginServices(username, password) {
             throw new Error("No se pudo obtener el token de acceso");
         }
 
-        // ⭐ MODIFICACIÓN CLAVE: Guardamos el token y el username
+        // Guardado del token y el username
         await AsyncStorage.setItem("moodleToken", token);
         await AsyncStorage.setItem("lastLoggedInUsername", username); // <-- AÑADIDO ESTO
 
-        // Retornamos solo lo necesario
+        // Retornamos los datos
         return {
             token: token,
             username: username,
@@ -48,19 +48,13 @@ export async function LoginServices(username, password) {
 
     } catch (error) {
         console.error("Error en login Moodle:", error);
-        
-        // Manejo de errores de red o servidor
         if (error.response) {
-            // Error con código de estado HTTP (4xx o 5xx)
             throw new Error(`Error del servidor: ${error.response.status}. Por favor, verifica tu URL o credenciales.`);
         } else if (error.request) {
-            // Error sin respuesta (ej. fallo de conexión/red)
             throw new Error("No se pudo conectar al servidor Moodle. Verifica tu conexión a internet.");
         } else if (error.message && !error.message.includes('Moodle')) {
-             // Re-lanza errores generados por la lógica de Moodle (como "Usuario o contraseña incorrectos")
             throw error; 
         } else {
-            // Otros errores, incluyendo errores lanzados por Moodle
             throw new Error(error.message || "Error desconocido durante el inicio de sesión.");
         }
     }
