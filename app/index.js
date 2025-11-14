@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Importar useEffect
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Entypo from '@expo/vector-icons/Entypo';
 import { useRouter } from 'expo-router';
 import { 
     StyleSheet, 
@@ -10,118 +12,197 @@ import {
     ScrollView,
     StatusBar, 
     Platform,
-    Dimensions
+    Dimensions,
+    ActivityIndicator, // Nuevo
+    Alert, // Nuevo
 } from 'react-native';
-// Se han eliminado las importaciones de 'expo-router' y '@expo/vector-icons'
-// para evitar errores de compilación en el entorno.
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Nuevo
+
+import { GetUserInfoService } from "../services/auth/userServices"; // Nuevo: Tu servicio de Moodle
 
 /* --- DEFINICIONES Y CONSTANTES --- */
-
-const HEADER_HEIGHT = 70; // Altura ajustada del Header para posicionamiento
-const SCREEN_WIDTH = Dimensions.get('window').width; // Obtenemos el ancho de la pantalla
+const HEADER_HEIGHT = 70; 
+const SCREEN_WIDTH = Dimensions.get('window').width; 
 
 const COLLEGE_COLORS = {
-    PRIMARY_RED: '#E83E4C', /* Rojo principal (Dominante de la marca) */
-    ACCENT_BLUE: '#49B6CC', /* Azul Turquesa/Cian (Secundario) */
+    PRIMARY_RED: '#E83E4C', 
+    ACCENT_BLUE: '#49B6CC', 
     TEXT_DARK: '#333333', 
     TEXT_LIGHT: '#999999', 
     WHITE: '#FFFFFF',
-    LIGHT_GRAY: '#F5F5F5', /* Fondo muy claro y limpio */
+    LIGHT_GRAY: '#F5F5F5', 
     PROFILE_CIRCLE: '#DDDDDD',
     BORDER_LIGHT: '#E0E0E0',
 };
 
-// Placeholder: Reemplaza con la URL de tu logo
-const ProfileImagePlaceholder = { uri: 'https://via.placeholder.com/150/f0f0f0/888888?text=AB' }; 
+// 💡 Placeholder ajustado al tamaño de 170
+const ProfileImagePlaceholder = { uri: 'https://via.placeholder.com/170/f0f0f0/888888?text=AB' }; 
 
 /* --- FUNCIÓN PRINCIPAL DEL COMPONENTE --- */
 
 export default function HomeScreen() {
-    // La llamada al hook se comenta por si causaba el error de resolución.
-    // useAuthRedirect(); 
-    
-    // --- Lógica del Menú Desplegable ---
-    // Se ha eliminado el hook 'useRouter' debido a errores de compilación.
+    const router = useRouter(); 
     const [isMenuVisible, setIsMenuVisible] = useState(false); 
 
-    // Función que abre y cierra el menú
+    // 🌟 ESTADOS NUEVOS PARA DATOS Y CARGA 🌟
+    const [userData, setUserData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [moodleToken, setMoodleToken] = useState(null); 
+    // 🌟 FIN ESTADOS NUEVOS 🌟
+    
+    // ----------------------------------------------------
+    // FUNCIÓN DE CARGA DE DATOS DE MOODLE
+    // ----------------------------------------------------
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const token = await AsyncStorage.getItem("moodleToken"); 
+                if (!token) {
+                    router.replace("/auth/Login"); 
+                    return;
+                }
+                setMoodleToken(token); 
+                
+                const username = await AsyncStorage.getItem("lastLoggedInUsername"); 
+                
+                if (!username) {
+                    router.replace("/auth/Login"); 
+                    return;
+                }
+
+                // 2. Obtener los datos del usuario usando el servicio de Moodle
+                // El servicio ahora devuelve la URL de imagen de la mejor calidad, Grado, Nivel y TIPO DE USUARIO.
+                const data = await GetUserInfoService(username, 'username'); 
+                
+                // Mapeamos los datos de Moodle a tu estructura
+                const mappedData = {
+                    name: data.fullname || "Alumno Desconocido", 
+                    grade: data.userGrade, 
+                    email: data.email || "Sin correo",
+                    school: "Nuevo Horizontes Global School", 
+                    profileImageUrl: data.profileimageurl || null, // Usamos la URL que el servicio ya filtró
+                    type: data.userType, // 💡 AGREGADO: El tipo de usuario extraído del servicio
+                };
+
+                setUserData(mappedData);
+
+            } catch (error) {
+                console.error("Error al cargar datos del perfil:", error);
+                Alert.alert("Error de Sesión", `No se pudo cargar tu perfil. Razón: ${error.message}`);
+                
+                await AsyncStorage.removeItem("moodleToken");
+                await AsyncStorage.removeItem("lastLoggedInUsername");
+                // router.replace("/auth/Login"); 
+                
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchUserData();
+    }, []);
+
+    // ----------------------------------------------------
+    // MANEJO DE LA INTERFAZ
+    // ----------------------------------------------------
+
     const handleToggleMenu = () => {
         setIsMenuVisible(!isMenuVisible);
     };
-const router = useRouter(); 
-    // Función para manejar la navegación a Login (ahora solo registra la acción)
-    const handleGoToLogin = () => {
-        setIsMenuVisible(false); // 1. Cierra el menú
-           router.push('/auth/Login'); // Navega a la ruta de Login
-       
+
+    const handleGoToLogin = async () => {
+        setIsMenuVisible(false); // Cierra el menú
+        
+        // 🚨 FUNCIÓN DE LOGOUT: Limpia el token al navegar
+        await AsyncStorage.removeItem("moodleToken");
+        await AsyncStorage.removeItem("lastLoggedInUsername");
+        
+        router.push('/auth/Login'); // Navega a la ruta de Login
     };
 
-    /* ⚠️ DATOS DE EJEMPLO */
-    const userData = {
-        name: "AARON BRAYDON VELAZQUEZ AVILA",
-        grade: "7° Grado Secundaria",
-        email: "aaronvelazquez@horizontes.edu.mx",
-        school: "Nuevo Horizontes Global School",
+    // Ajustado: Manejador para el botón de Notificaciones 
+    const handleGoToNotifications = () => {
+        console.log("Navegar a Notificaciones");
+        // Aquí podrías agregar lógica de navegación si tuvieras una ruta '/notifications'
     };
-    /* ⚠️ FIN DATOS DE EJEMPLO */
+
+    // ----------------------------------------------------
+    // PANTALLA DE CARGA
+    // ----------------------------------------------------
+
+    if (isLoading || !userData) {
+        return (
+            <SafeAreaView style={[styles.safeArea, { backgroundColor: COLLEGE_COLORS.PRIMARY_RED }]}>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLLEGE_COLORS.PRIMARY_RED} />
+                    <Text style={{ marginTop: 10, color: COLLEGE_COLORS.TEXT_DARK }}>
+                        Cargando datos del alumno...
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+    
+    // ----------------------------------------------------
+    // RENDERIZADO DEL CONTENIDO CON DATOS REALES
+    // ----------------------------------------------------
+
+    // 💡 LÓGICA PARA CARGAR LA IMAGEN CON HEADERS
+    const profileImageSource = userData.profileImageUrl && moodleToken
+        ? { 
+            uri: userData.profileImageUrl, 
+            headers: { Authorization: `Bearer ${moodleToken}` } 
+          }
+        : ProfileImagePlaceholder;
+
 
     return (
-        // CLAVE: Aplicamos el fondo rojo aquí para cubrir la barra de estado y el notch.
         <SafeAreaView style={[styles.safeArea, { backgroundColor: COLLEGE_COLORS.PRIMARY_RED }]}> 
             
-            {/* Configuración de la barra de estado */}
             <StatusBar 
                 barStyle="light-content"
                 backgroundColor={COLLEGE_COLORS.PRIMARY_RED}
             />
             
-            {/* I. HEADER - No necesita fondo inline porque SafeAreaView lo proporciona */}
+            {/* I. HEADER */}
             <View style={styles.header}>
-                {/* Botón de Hamburguesa: Llama a handleToggleMenu */}
                 <TouchableOpacity style={styles.menuButton} onPress={handleToggleMenu}>
-                    {/* Reemplazado Feather icon por Text/Emoji */}
-                    <Text style={styles.headerIconText}>☰</Text>
+                    <Text style={styles.headerIconText}><Entypo name="menu" size={34} color="white" /></Text>
                 </TouchableOpacity>
                 
-                {/* Logo Central (Usando Text como placeholder de logo) */}
                 <Text style={styles.headerTitle}>college</Text>
                 
-                {/* Botón de Notificaciones */}
-                <TouchableOpacity style={styles.notificationButton}>
-                    {/* Reemplazado Feather icon por Text/Emoji */}
-                    <Text style={styles.headerIconText}>🔔</Text>
+                {/* 💡 CAMBIADO: A una silueta de campana minimalista usando el carácter Unicode 🔔 */}
+                <TouchableOpacity style={styles.notificationButton} onPress={handleGoToNotifications}>
+                    <Text style={styles.headerIconText}><FontAwesome name="bell" size={24} color="white" /></Text> 
                 </TouchableOpacity>
             </View>
 
             {/* II. MENÚ DESPLEGABLE (Flotante) */}
             {isMenuVisible && (
-                // Overlay que cierra el menú al tocar cualquier parte de la pantalla
                 <TouchableOpacity 
                     style={styles.menuOverlay} 
                     onPress={() => setIsMenuVisible(false)}
                     activeOpacity={1}
                 >
-                    {/* Contenedor del menú, posicionado absolutamente */}
                     <View style={styles.dropdownMenu}>
                         
-                        {/* Opción 1: Iniciar Sesión (o Perfil si ya está logueado) */}
+                        {/* Opción 1: Logout (usamos el handleGoToLogin como Logout) */}
                         <TouchableOpacity style={styles.menuItem} onPress={handleGoToLogin}>
                             <Text style={styles.menuItemText}>
-                                {userData.name ? 'Ir al Perfil' : 'Iniciar Sesión'}
+                                Cerrar Sesión
                             </Text>
-                            {/* Icono de Perfil/Login */}
                             <Text style={styles.menuIconText}>
-                                {userData.name ? '👤' : '🚪'}
+                                🚪
                             </Text>
                         </TouchableOpacity>
 
-                        {/* Opción 2: Cursos (o alguna otra opción principal) */}
+                        {/* Opción 2: Cursos */}
                         <TouchableOpacity style={styles.menuItem} onPress={() => {
                             setIsMenuVisible(false);
                             console.log("Navegar a Mis Cursos");
                         }}>
                             <Text style={styles.menuItemText}>Mis Cursos</Text>
-                            {/* Icono de Libro */}
                             <Text style={styles.menuIconText}>📖</Text>
                         </TouchableOpacity>
                         
@@ -129,7 +210,7 @@ const router = useRouter();
                 </TouchableOpacity>
             )}
 
-            {/* CLAVE: El ScrollView es ahora el que tiene el fondo gris y contiene el resto del contenido. */}
+            {/* III. CONTENIDO PRINCIPAL SCROLLABLE */}
             <ScrollView 
                 style={{ backgroundColor: COLLEGE_COLORS.LIGHT_GRAY }}
                 contentContainerStyle={styles.scrollViewContent}
@@ -138,8 +219,19 @@ const router = useRouter();
                 {/* III. SECCIÓN DE PERFIL PRINCIPAL */}
                 <View style={styles.profileSection}>
                     <View style={styles.profileCircle}>
-                        <Image source={ProfileImagePlaceholder} style={styles.profileImage} resizeMode="cover" />
+                        {/* 🚨 IMAGEN DE PERFIL: Usa la fuente dinámica que incluye el token */}
+                        <Image 
+                            source={profileImageSource} // 💡 USAMOS LA FUENTE DEFINIDA ARRIBA
+                            style={styles.profileImage} 
+                            resizeMode="cover" 
+                        />
                     </View>
+                    
+                    {/* NUEVO: Tipo de Usuario (Profesor/Estudiante) */}
+                    {userData.type && userData.type !== "Tipo No Definido" && (
+                         <Text style={styles.userType}>{userData.type}</Text>
+                    )}
+
                     <Text style={styles.userName}>{userData.name}</Text>
                     <Text style={styles.userGrade}>{userData.grade}</Text>
                     <Text style={styles.userEmail}>{userData.email}</Text>
@@ -151,7 +243,6 @@ const router = useRouter();
                     <Text style={styles.cardSubtitle}>
                         Consulta tus cursos, calificaciones y logros usando el menú superior.
                     </Text>
-                    {/* Botón BLANCO */}
                     <TouchableOpacity style={styles.cardButton} onPress={handleToggleMenu}>
                         <Text style={styles.cardButtonText}>Abrir Menú de Navegación</Text>
                     </TouchableOpacity>
@@ -174,10 +265,20 @@ const router = useRouter();
     );
 }
 
-/* --- ESTILOS --- */
+// ----------------------------------------------------
+// ESTILOS (Actualizados para la imagen de perfil)
+// ----------------------------------------------------
+
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1, 
+    },
+    // 🌟 NUEVO ESTILO: Contenedor para la pantalla de carga
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: COLLEGE_COLORS.LIGHT_GRAY,
     },
     scrollViewContent: {
         paddingHorizontal: 20, 
@@ -193,14 +294,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         width: SCREEN_WIDTH, 
         marginHorizontal: 0,
-        
         paddingHorizontal: 15,
         paddingVertical: 10,
         height: HEADER_HEIGHT, 
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-        
-        // Mantenemos esta corrección para Android
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, 
         zIndex: 100, 
     },
@@ -209,10 +307,11 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: COLLEGE_COLORS.WHITE,
     },
-    headerIconText: {
-        fontSize: 24,
+    // 💡 Ajuste de tamaño para el nuevo icono de campana (se ve mejor en 20px)
+    headerIconText: { 
+        fontSize: 20, 
         color: COLLEGE_COLORS.WHITE,
-        lineHeight: 28, // Asegura que el texto/emoji se centre bien
+        lineHeight: 24, 
     },
     menuButton: {
         padding: 5,
@@ -233,7 +332,6 @@ const styles = StyleSheet.create({
     },
     dropdownMenu: {
         position: 'absolute',
-        // Calculamos la posición superior basada en la altura del header
         top: (Platform.OS === 'android' && StatusBar.currentHeight ? StatusBar.currentHeight : 0) + HEADER_HEIGHT, 
         left: 10, 
         width: SCREEN_WIDTH * 0.55, 
@@ -271,26 +369,39 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
         width: '100%',
     },
-    profileCircle: {
-        width: 150,
-        height: 150,
-        borderRadius: 75,
-        borderWidth: 4,
-        borderColor: COLLEGE_COLORS.PROFILE_CIRCLE,
+    // 💡 MODIFICADO: Volvemos a CÍRCULO (borderRadius: 85) y agregamos borde blanco para que resalte.
+    profileCircle: { 
+        width: 170, 
+        height: 170,
+        borderRadius: 85, // <<< CORRECCIÓN: Vuelve a CÍRCULO
+        borderWidth: 4, // Nuevo: Borde para que resalte
+        borderColor: COLLEGE_COLORS.WHITE, // Color blanco
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
+        // Mejoramos la sombra para que flote suavemente
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.2, 
+        shadowRadius: 10, 
+        elevation: 10,
         backgroundColor: COLLEGE_COLORS.WHITE,
     },
+    // 💡 MODIFICADO: Volvemos a CÍRCULO (borderRadius: 85)
     profileImage: {
-        width: 140,
-        height: 140,
-        borderRadius: 70,
+        width: 162, // 170 - (4*2) = 162 (ajustamos por el grosor del borde)
+        height: 162, 
+        borderRadius: 81, // <<< CORRECCIÓN: Vuelve a CÍRCULO (mitad de 162)
+    },
+    userType: { 
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLLEGE_COLORS.ACCENT_BLUE, 
+        marginBottom: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 2,
+        borderRadius: 5,
+        backgroundColor: COLLEGE_COLORS.ACCENT_BLUE + '10', 
     },
     userName: {
         fontSize: 22,
