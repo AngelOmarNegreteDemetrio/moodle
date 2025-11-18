@@ -138,11 +138,11 @@ export default function HomeScreen() {
                 {/* SECCIÓN DE PERFIL PRINCIPAL */}
                 <View style={styles.profileSection}>
                     <View style={styles.profileCircle}>
-                        {/* IMAGEN DE PERFIL: Usa la fuente dinámica que incluye el token */}
+                        {/* Imagen del perfil Usando el token */}
                         <Image
                             source={profileImageSource}
                             style={styles.profileImage}
-                            resizeMode="cover"
+                            resizeMode="contain"
                         />
                     </View>
 
@@ -209,27 +209,33 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
         width: '100%',
     },
+
+    // 🔥 CÍRCULO PERFECTO con overflow hidden
     profileCircle: {
         width: 170,
         height: 170,
         borderRadius: 85,
+        overflow: "hidden",
+        backgroundColor: COLLEGE_COLORS.WHITE,
         borderWidth: 4,
         borderColor: COLLEGE_COLORS.WHITE,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.2,
         shadowRadius: 10,
         elevation: 10,
-        backgroundColor: COLLEGE_COLORS.WHITE,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 20,
     },
+
+    // 🔥 Imagen a máxima calidad y sin distorsión
     profileImage: {
-        width: 162,
-        height: 162,
-        borderRadius: 81,
+        width: "100%",
+        height: "100%",
+        borderRadius: 85,
     },
+
     userType: {
         fontSize: 16,
         fontWeight: '600',
@@ -323,3 +329,4 @@ const styles = StyleSheet.create({
         marginHorizontal: 4,
     },
 });
+
