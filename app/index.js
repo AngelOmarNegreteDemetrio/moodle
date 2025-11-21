@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Entypo from '@expo/vector-icons/Entypo';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router'; // 🛑 Importamos useFocusEffect
 import {
     StyleSheet,
     Text,
@@ -11,7 +11,6 @@ import {
     SafeAreaView,
     ScrollView,
     StatusBar,
-    Platform,
     Dimensions,
     ActivityIndicator,
     Alert,
@@ -46,54 +45,67 @@ export default function HomeScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [moodleToken, setMoodleToken] = useState(null);
 
-    // FUNCIÓN DE CARGA DE DATOS DE MOODLE (SE MANTIENE)
+    // 🛑 CLAVE: Reemplazamos useEffect con useFocusEffect
+    useFocusEffect(
+        useCallback(() => {
+            let isActive = true;
 
-    useEffect(() => {
-        const fetchUserData = async () => {
-            try {
-                const token = await AsyncStorage.getItem("moodleToken");
-                if (!token) {
-                    router.replace("/auth/Login");
-                    return;
+            const fetchUserData = async () => {
+                setIsLoading(true);
+                setUserData(null); // 💡 Limpiamos datos viejos al empezar a cargar
+                
+                try {
+                    const token = await AsyncStorage.getItem("moodleToken");
+                    if (!token) {
+                        router.replace("/auth/Login");
+                        return;
+                    }
+                    if (isActive) setMoodleToken(token);
+
+                    const username = await AsyncStorage.getItem("lastLoggedInUsername");
+
+                    if (!username) {
+                        router.replace("/auth/Login");
+                        return;
+                    }
+
+                    // Obtener los datos del usuario usando el servicio de Moodle
+                    const data = await GetUserInfoService(username, 'username');
+
+                    // Mapeo de datos (Asegúrate de que 'data' es un objeto con la info correcta)
+                    const mappedData = {
+                        name: data.fullname || "Alumno Desconocido",
+                        grade: data.userGrade, // Asumo que GetUserInfoService devuelve este campo
+                        email: data.email || "Sin correo",
+                        school: "Nuevo Horizontes Global School",
+                        profileImageUrl: data.profileimageurl || null,
+                        type: data.userType, // Asumo que GetUserInfoService devuelve este campo
+                    };
+
+                    if (isActive) setUserData(mappedData);
+
+                } catch (error) {
+                    console.error("Error al cargar datos del perfil:", error);
+                    Alert.alert("Error de Sesión", `No se pudo cargar tu perfil. Razón: ${error.message}. Serás redirigido al Login.`);
+
+                    // Si hay un error, borramos la sesión y enviamos al login
+                    await AsyncStorage.removeItem("moodleToken");
+                    await AsyncStorage.removeItem("lastLoggedInUsername");
+                    if (isActive) router.replace("/auth/Login");
+
+                } finally {
+                    if (isActive) setIsLoading(false);
                 }
-                setMoodleToken(token);
+            };
 
-                const username = await AsyncStorage.getItem("lastLoggedInUsername");
+            fetchUserData();
 
-                if (!username) {
-                    router.replace("/auth/Login");
-                    return;
-                }
-
-                // Obtener los datos del usuario usando el servicio de Moodle
-                const data = await GetUserInfoService(username, 'username');
-
-                // Mapeo de datos 
-                const mappedData = {
-                    name: data.fullname || "Alumno Desconocido",
-                    grade: data.userGrade,
-                    email: data.email || "Sin correo",
-                    school: "Nuevo Horizontes Global School",
-                    profileImageUrl: data.profileimageurl || null,
-                    type: data.userType,
-                };
-
-                setUserData(mappedData);
-
-            } catch (error) {
-                console.error("Error al cargar datos del perfil:", error);
-                Alert.alert("Error de Sesión", `No se pudo cargar tu perfil. Razón: ${error.message}`);
-
-                await AsyncStorage.removeItem("moodleToken");
-                await AsyncStorage.removeItem("lastLoggedInUsername");
-
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchUserData();
-    }, []);
+            // Función de limpieza para useFocusEffect
+            return () => {
+                isActive = false;
+            };
+        }, []) // Dependencias vacías: se ejecuta CADA VEZ que la pantalla es enfocada.
+    );
 
 
     if (isLoading || !userData) {
@@ -329,4 +341,3 @@ const styles = StyleSheet.create({
         marginHorizontal: 4,
     },
 });
-

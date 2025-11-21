@@ -1,13 +1,56 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { API_URL } from "../../constants/url";
 
-const MOODLE_URL = "https://prueba.soluciones-hericraft.com";
+// ------------------------------------------------------------------
+// 🚀 FUNCIÓN DE CIERRE DE SESIÓN (EXPORTADA)
+// ------------------------------------------------------------------
+// 🛑 Esta función debe ser llamada en tu componente de "Cerrar Sesión"
+export async function logoutUser() {
+    console.log("Cerrando sesión: Limpiando datos de Moodle...");
+
+    // Eliminamos las tres claves que guardamos al iniciar sesión
+    await AsyncStorage.removeItem("moodleToken");
+    await AsyncStorage.removeItem("moodleUserId");
+    await AsyncStorage.removeItem("lastLoggedInUsername");
+}
+// ------------------------------------------------------------------
+
+
+// ------------------------------------------------------------------
+// FUNCIÓN AUXILIAR: Para obtener el ID del usuario
+// ------------------------------------------------------------------
+async function getUserData(token, username) {
+    const functionName = "core_user_get_users_by_field";
+
+    const userResponse = await axios.get(`${API_URL}/webservice/rest/server.php`, {
+        params: {
+            wstoken: token,
+            moodlewsrestformat: 'json',
+            wsfunction: functionName,
+            field: 'username',
+            values: [username]
+        }
+    });
+
+    const userDataArray = userResponse.data;
+
+    if (userDataArray && userDataArray.length > 0 && !userDataArray.exception) {
+        return userDataArray[0];
+    } else {
+        throw new Error("No se pudo obtener el ID de usuario después de la autenticación.");
+    }
+}
+// ------------------------------------------------------------------
+
 
 export async function LoginServices(username, password) {
     try {
-        //  token basico de moodle
+        // 🛑 NO LLAMAMOS A LA LIMPIEZA AQUÍ. Confiamos en que la función logoutUser() la haga al cerrar sesión.
+
+        // 1. OBTENER TOKEN
         const tokenResponse = await axios.post(
-            `${MOODLE_URL}/login/token.php`,
+            `${API_URL}/login/token.php`,
             new URLSearchParams({
                 username: username,
                 password: password,
@@ -19,11 +62,9 @@ export async function LoginServices(username, password) {
         );
 
         const tokenData = tokenResponse.data;
-        console.log("Token response:", tokenData);
 
         if (tokenData.error) {
-            // Verificar si Moodle devuelve un mensaje de error específico
-            const errorMessage = tokenData.error 
+            const errorMessage = tokenData.error
                 ? `${tokenData.error} (${tokenData.errorcode || 'error de Moodle'})`
                 : "Usuario o contraseña incorrectos";
             throw new Error(errorMessage);
@@ -31,29 +72,29 @@ export async function LoginServices(username, password) {
 
         const token = tokenData.token;
 
-        if (!token) {
-            throw new Error("No se pudo obtener el token de acceso");
-        }
+        // 2. OBTENER ID DEL USUARIO
+        const userDetails = await getUserData(token, username);
 
-        // Guardado del token y el username
+        // 3. GUARDAR LA NUEVA SESIÓN (SOBRESCRIBE LA ANTERIOR)
         await AsyncStorage.setItem("moodleToken", token);
-        await AsyncStorage.setItem("lastLoggedInUsername", username); // <-- AÑADIDO ESTO
+        await AsyncStorage.setItem("lastLoggedInUsername", username);
+        await AsyncStorage.setItem("moodleUserId", userDetails.id.toString());
 
         // Retornamos los datos
         return {
             token: token,
+            userid: userDetails.id,
             username: username,
             success: true
         };
 
     } catch (error) {
         console.error("Error en login Moodle:", error);
+
         if (error.response) {
             throw new Error(`Error del servidor: ${error.response.status}. Por favor, verifica tu URL o credenciales.`);
         } else if (error.request) {
             throw new Error("No se pudo conectar al servidor Moodle. Verifica tu conexión a internet.");
-        } else if (error.message && !error.message.includes('Moodle')) {
-            throw error; 
         } else {
             throw new Error(error.message || "Error desconocido durante el inicio de sesión.");
         }
