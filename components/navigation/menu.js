@@ -1,21 +1,21 @@
 // app/components/navigation/menu.js
 
-import React from 'react';
-import { 
-    View, 
-    StyleSheet, 
-    TouchableOpacity, 
-    Text,
-    Dimensions,
-    Alert,
-    Platform,
-    StatusBar as RNStatusBar, 
-} from 'react-native';
+import Entypo from '@expo/vector-icons/Entypo';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
-import AsyncStorage from "@react-native-async-storage/async-storage"; 
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import Entypo from '@expo/vector-icons/Entypo'; 
+import React from 'react';
+import {
+    Alert,
+    Dimensions,
+    Platform,
+    StatusBar as RNStatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const HEADER_HEIGHT = 70;
 const SCREEN_WIDTH = Dimensions.get('window').width;
