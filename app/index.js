@@ -1,21 +1,19 @@
-import React, { useState, useCallback } from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import Entypo from '@expo/vector-icons/Entypo';
-import { useRouter, useFocusEffect } from 'expo-router'; // 🛑 Importamos useFocusEffect
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
     Image,
-    TouchableOpacity,
     SafeAreaView,
     ScrollView,
     StatusBar,
-    Dimensions,
-    ActivityIndicator,
-    Alert,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import Header from '../components/navigation/menu';
 
@@ -45,7 +43,7 @@ export default function HomeScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [moodleToken, setMoodleToken] = useState(null);
 
-    // 🛑 CLAVE: Reemplazamos useEffect con useFocusEffect
+    // 🛑 CLAVE: useFocusEffect se ejecuta CADA VEZ que la pantalla es enfocada.
     useFocusEffect(
         useCallback(() => {
             let isActive = true;
@@ -120,7 +118,7 @@ export default function HomeScreen() {
             </SafeAreaView>
         );
     }
-
+    
 
     // LÓGICA PARA CARGAR LA IMAGEN CON HEADERS (SE MANTIENE)
     const profileImageSource = userData.profileImageUrl && moodleToken
@@ -152,6 +150,8 @@ export default function HomeScreen() {
                     <View style={styles.profileCircle}>
                         {/* Imagen del perfil Usando el token */}
                         <Image
+                            // 🔥 CORRECCIÓN: Usar 'key' para forzar la invalidación de la caché local.
+                            key={profileImageSource.uri}
                             source={profileImageSource}
                             style={styles.profileImage}
                             resizeMode="contain"

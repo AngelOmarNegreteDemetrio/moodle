@@ -1,37 +1,47 @@
-import { useEffect, useState, useCallback } from 'react';
-import { 
-    View, Text, StyleSheet, ActivityIndicator, FlatList, 
-    ScrollView, RefreshControl, TouchableOpacity, SafeAreaView 
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-// Se importa useFocusEffect de expo-router para forzar la recarga al enfocar la pantalla
-import { useFocusEffect } from 'expo-router'; 
 
-import { getEnrolledCourses } from '../../services/auth/courseServices'; 
+// Asegúrate de que esta ruta sea correcta para tu servicio
+import { getEnrolledCourses } from '../../services/auth/courseServices';
 
 const PRIMARY_COLOR = '#E83E4C'; 
 const BACKGROUND_COLOR = '#f5f5f5'; 
 
 export default function CourseScreen() { 
+    const router = useRouter();
+
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     
-    // ESTADOS para manejar el colapso 
+    // Mantenemos los estados de colapso si los quieres seguir usando
     const [isEnrolledExpanded, setIsEnrolledExpanded] = useState(true);
-    const [isCompletedExpanded, setIsCompletedExpanded] = useState(true);
+    const [isCompletedExpanded, setIsCompletedExpanded] = useState(true); 
 
     const fetchCourses = useCallback(async (isRefreshing = false) => {
         if (!isRefreshing) setLoading(true); 
         setError(null);
         try {
-            // Esta función lee el token y userId de AsyncStorage.
-            // Al ser llamada cada vez que se enfoca la pantalla,
-            // garantiza que se lean los datos del usuario actualmente logueado.
+            // Se llama al servicio que SOLO trae la lista básica de cursos, 
+            // SIN hacer llamadas adicionales para el progreso.
             const data = await getEnrolledCourses(); 
             setCourses(Array.isArray(data) ? data : []); 
         } catch (err) {
             console.error("Fallo al cargar los cursos:", err);
+            Alert.alert("Error de Carga", err.message || "No se pudieron cargar los cursos.");
             setError(err.message || "No se pudieron cargar los cursos.");
             setCourses([]); 
         } finally {
@@ -40,11 +50,21 @@ export default function CourseScreen() {
         }
     }, []); 
 
-    // CAMBIO CRUCIAL: Usar useFocusEffect en lugar de useEffect
+    // --- FUNCIÓN DE CLIC PARA NAVEGAR A DETALLE ---
+    const handleCoursePress = (courseId, courseName) => {
+        router.push({
+            pathname: "/auth/courseDetail", 
+            params: { 
+                courseId: courseId.toString(), 
+                courseName: courseName 
+            } 
+        });
+    };
+    // ---------------------------------------------
+
     useFocusEffect(
         useCallback(() => {
             fetchCourses(false);
-            // La función de limpieza es opcional aquí, pero la dependencia es crucial.
         }, [fetchCourses])
     );
 
@@ -75,22 +95,29 @@ export default function CourseScreen() {
         );
     }
 
-    // Filtros que funcionan con progress null, undefined, o 0
-    const enrolledCourses = courses.filter(course => (course.progress ?? 0) < 100); 
-    const completedCourses = courses.filter(course => course.progress === 100); 
+    // 🚨 CAMBIO CLAVE: Ya no podemos filtrar por progreso. 
+    // Usaremos todos los cursos como "Inscritos" por simplicidad.
+    const allCourses = courses; 
+    
+    // Si necesitas las secciones, necesitarás una forma alternativa de dividir los cursos (ej. por categoría o estado manual)
+    // Para simplificar y mantener la estructura, colocamos todos en "Cursos Inscritos" (enrolledCourses)
+    const enrolledCourses = allCourses;
+    const completedCourses = []; // Dejamos esta lista vacía a menos que tengas otra forma de identificarlos.
+    
 
+    // --- RENDERIZADO DEL ÍTEM DE CURSO (SIMPLIFICADO) ---
     const renderCourseItem = ({ item }) => (
-        <View style={styles.courseItem}>
-            <View>
+        <TouchableOpacity 
+            style={styles.courseItem}
+            onPress={() => handleCoursePress(item.id, item.fullname)}
+        >
+            {/* Solo mostramos el nombre y el ID */}
+            <View> 
                 <Text style={styles.courseTitle}>{item.fullname}</Text>
                 <Text style={styles.courseSubtitle}>ID Moodle: {item.id}</Text> 
             </View>
-            <View style={styles.progressContainer}>
-                <Text style={styles.progressText}>
-                    { (item.progress ?? 0).toFixed(2) + '%' }
-                </Text>
-            </View>
-        </View>
+            {/* 🛑 Eliminamos el View style={styles.progressContainer} y el Text style={styles.progressText} */}
+        </TouchableOpacity>
     );
 
     // --- VISTA PRINCIPAL (FINAL) ---
@@ -104,6 +131,7 @@ export default function CourseScreen() {
                 }
             >
                 
+                {/* CURSOS INSCRITOS */}
                 <TouchableOpacity 
                     style={styles.sectionHeader} 
                     onPress={() => setIsEnrolledExpanded(!isEnrolledExpanded)}
@@ -128,6 +156,7 @@ export default function CourseScreen() {
                 )}
                 
                 
+                {/* CURSOS TERMINADOS - ESTA SECCIÓN NO MOSTRARÁ NADA AHORA */}
                 <TouchableOpacity 
                     style={[styles.sectionHeader, { marginTop: 20 }]}
                     onPress={() => setIsCompletedExpanded(!isCompletedExpanded)}
@@ -159,15 +188,15 @@ export default function CourseScreen() {
     );
 }
 
-// --- ESTILOS MODIFICADOS CON COLORES DE MARCA ---
+// --- ESTILOS (MODIFICADOS) ---
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: BACKGROUND_COLOR, // Cambiamos el fondo del SafeArea a gris claro
+        backgroundColor: BACKGROUND_COLOR, 
     },
     scrollView: {
         flex: 1,
-        backgroundColor: BACKGROUND_COLOR, // Fondo de la pantalla
+        backgroundColor: BACKGROUND_COLOR, 
     },
     flatList: {
         backgroundColor: 'white',
@@ -222,7 +251,8 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: 'white',
     },
-    courseItem: {
+    // Estilo del item ahora es un TouchableOpacity
+    courseItem: { 
         backgroundColor: '#fff',
         padding: 15,
         borderBottomWidth: 1,
@@ -235,21 +265,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#333',
-        maxWidth: '70%',
+        // 🚨 CAMBIO: Ajustamos el maxWidth para que el título use todo el espacio disponible
+        maxWidth: '100%', 
     },
     courseSubtitle: {
         fontSize: 13,
         color: '#666',
         marginTop: 4,
     },
-    progressContainer: {
-        alignItems: 'flex-end',
-    },
-    progressText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: PRIMARY_COLOR,
-    },
+    // 🛑 Eliminamos progressContainer y progressText.
     noResultsText: {
         padding: 15,
         marginHorizontal: 15,
