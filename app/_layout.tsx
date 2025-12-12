@@ -1,12 +1,12 @@
 // app/_layout.tsx
 
-import React from 'react';
-import { StatusBar } from "expo-status-bar";
 import { Drawer } from 'expo-router/drawer';
+import { StatusBar } from "expo-status-bar";
+import React from 'react';
 
 // 🛑 CORRECCIÓN: Importamos AMBOS componentes del mismo archivo 'menu'
 // MenuContent es la exportación por defecto. CustomHeader es la exportación nombrada.
-import MenuContent, { CustomHeader } from '../components/navigation/menu'; 
+import MenuContent, { CustomHeader } from '../components/navigation/menu';
 
 
 export default function MainLayout() {

@@ -31,12 +31,9 @@ const COLLEGE_COLORS = {
     WHITE: '#FFFFFF',
 };
 
-// ------------------------------------------------------------------
-// 🛑 FUNCIÓN 1: EL ENCABEZADO (BARRA ROJA Y CAMPANA)
-// 🛑 La exportamos por nombre para usarla en el _layout
-// ------------------------------------------------------------------
-export function CustomHeader({ onMenuPress }) { 
 
+export function CustomHeader({ onMenuPress }) { 
+    // ... (El código de CustomHeader no ha cambiado)
     const handleGoToNotifications = () => {
         Alert.alert("Notificaciones", "La vista de Notificaciones aún no está implementada.");
     };
@@ -89,23 +86,23 @@ const headerStyles = StyleSheet.create({
 
 // ------------------------------------------------------------------
 // 🛑 FUNCIÓN 2: EL CONTENIDO DEL MENÚ (OPCIONES)
-// 🛑 La exportamos por defecto para usarla en la prop 'drawerContent'
 // ------------------------------------------------------------------
 export default function MenuContent(props) {
     const { navigation } = props;
     const router = useRouter(); 
 
-    // Lógica para el estado activo (igual a la anterior)
+    // Lógica para el estado activo 
     const isActive = (routeName) => {
         if (!navigation || !navigation.getState) {
             return false;
         }
         const state = navigation.getState();
         const focusedRoute = state.routes[state.index].name;
+        // La ruta activa debe coincidir con el nombre de la ruta.
         return focusedRoute === routeName;
     };
     
-    // Lógica de navegación (igual a la anterior)
+    // Lógica de navegación 
     const handleGoToLogin = async () => {
         if (navigation) navigation.closeDrawer(); 
         await AsyncStorage.removeItem("moodleToken");
@@ -114,11 +111,18 @@ export default function MenuContent(props) {
     };
 
     const handleGoToCourses = () => {
+        // Usamos navigation.navigate('auth/course') para navegar dentro del Drawer
         if (navigation) navigation.navigate('auth/course'); 
     };
-
+    
     const handleGoToindex = () => {
         if (navigation) navigation.navigate('index'); 
+    }
+
+    // 🚨 NUEVO HANDLER DE NAVEGACIÓN
+    const handleGoToTest = () => {
+        // CORREGIDO: Usamos 'auth/TestScreen' (con T y S mayúsculas) para que coincida con la ruta de Expo Router
+        if (navigation) navigation.navigate('auth/testScreen'); 
     }
     
     // Estilos condicionales
@@ -128,7 +132,6 @@ export default function MenuContent(props) {
 
     return (
         <DrawerContentScrollView {...props} contentContainerStyle={styles.container}>
-            {/* Contenido del menú... (Opciones) */}
             <View style={styles.menuItemsContainer}>
 
                 {/* Opción 1: Inicio */}
@@ -155,9 +158,23 @@ export default function MenuContent(props) {
                     <FontAwesome name="book" size={20} color={isActive('auth/course') ? activeIconColor : COLLEGE_COLORS.TEXT_DARK} />
                 </TouchableOpacity>
                 
+                {/* 🚨 Opción 3: Realizar Test MBTI */}
+                <TouchableOpacity 
+                    // CORREGIDO: Usamos 'auth/TestScreen' (con T y S mayúsculas) para la lógica de estilo activo
+                    style={[styles.menuItem, isActive('auth/testScreen') && activeItemStyle]} 
+                    onPress={handleGoToTest}
+                    activeOpacity={0.9} 
+                >
+                    <Text style={[styles.menuItemText, isActive('auth/testScreen') && activeTextStyle]}>
+                        Mi Rol
+                    </Text>
+                    {/* Usamos un icono de documento/archivo para representar el test */}
+                    <FontAwesome name="file-text-o" size={20} color={isActive('auth/testScreen') ? activeIconColor : COLLEGE_COLORS.TEXT_DARK} />
+                </TouchableOpacity>
+                
                 <View style={styles.menuSeparator} />
 
-                {/* Opción 3: Cerrar Sesión */}
+                {/* Opción 4: Cerrar Sesión */}
                 <TouchableOpacity 
                     style={styles.menuItem} 
                     onPress={handleGoToLogin}
