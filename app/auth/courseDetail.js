@@ -1,29 +1,46 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
     ActivityIndicator, Alert, FlatList,
     Linking,
+    Platform,
     SafeAreaView,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
-// Importamos Ionicons para el icono de flecha
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-// Asegúrate de que esta ruta sea correcta para tu estructura de proyecto
 import { GetCourseActivitiesService } from "../../services/auth/courseServices";
+import { useTheme } from '../context/themeContext';
 
-const PRIMARY_COLOR = '#E83E4C'; 
-const SECONDARY_COLOR = '#49B6CC'; 
-const BACKGROUND_COLOR = '#f5f5f5';
+/* Colores unificados para la coherencia del encabezado */
+const COLLEGE_COLORS_COINCIDENTE = {
+    CLARO: '#FF0000', 
+    OSCURO: '#F55D69', 
+    SECONDARY: '#49B6CC',
+};
 
-// ----------------------------------------------------
-// Componente principal
-// ----------------------------------------------------
+/* Componente principal */
 export default function CourseDetailScreen() {
     const router = useRouter();
     const { courseId, courseName } = useLocalSearchParams(); 
+
+    const { theme, isDark } = useTheme();
+
+    /* Definición dinámica de colores */
+    const HEADER_COLOR = isDark 
+        ? COLLEGE_COLORS_COINCIDENTE.OSCURO 
+        : COLLEGE_COLORS_COINCIDENTE.CLARO; 
+        
+    const ACTIVITY_ACCENT_COLOR = isDark ? theme.primary : COLLEGE_COLORS_COINCIDENTE.SECONDARY; 
+    const PRIMARY_COLOR = HEADER_COLOR; 
+    
+    const ACCENT_TEXT_COLOR = isDark ? theme.text : '#333'; 
+    const CARD_BACKGROUND_COLOR = theme.card; 
+    const BACKGROUND_COLOR = theme.background; 
+    const LIGHT_TEXT_COLOR = isDark ? theme.text : '#FFFFFF';
 
     const [pendingActivities, setPendingActivities] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -66,54 +83,54 @@ export default function CourseDetailScreen() {
         }
     };
 
-    // Función para renderizar cada actividad pendiente
     const renderActivity = ({ item }) => (
         <TouchableOpacity 
-            style={styles.activityItem} 
+            style={[
+                styles.activityItem,
+                { backgroundColor: CARD_BACKGROUND_COLOR, borderLeftColor: ACTIVITY_ACCENT_COLOR }
+            ]} 
             onPress={() => handleOpenActivity(item.url)}
         >
             <View style={styles.activityInfo}>
-                {/* Muestra el tipo de actividad (SCORM/PAGE/RESOURCE) */}
-                <Text style={styles.activitySectionType}>{item.type.toUpperCase()}</Text> 
-                <Text style={styles.activityName} numberOfLines={2}>{item.name}</Text>
+                <Text style={[styles.activitySectionType, { color: PRIMARY_COLOR }]}>{item.type.toUpperCase()}</Text> 
+                <Text style={[styles.activityName, { color: ACCENT_TEXT_COLOR }]} numberOfLines={2}>{item.name}</Text>
             </View>
         </TouchableOpacity>
     );
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.loadingContainer}>
+            <SafeAreaView style={[styles.loadingContainer, { backgroundColor: BACKGROUND_COLOR }]}>
                 <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-                <Text style={styles.loadingText}>Cargando actividades de **{courseName || 'el curso'}**...</Text>
+                {/* 🚨 CAMBIO DE TEXTO IMPLEMENTADO: */}
+                <Text style={[styles.loadingText, { color: ACCENT_TEXT_COLOR }]}>Cargando...</Text>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* --- ENCABEZADO PERSONALIZADO --- */}
-            <View style={styles.header}>
+        <View style={[styles.container, { backgroundColor: BACKGROUND_COLOR }]}>
+            {/* ENCABEZADO PERSONALIZADO */}
+            <View style={[styles.header, { backgroundColor: PRIMARY_COLOR }]}>
                 <TouchableOpacity 
-                    // 🚨 CAMBIO CLAVE: Usamos router.replace para ir directamente a la ruta de cursos.
-                    // Esto asume que tu archivo course.js está en la ruta /auth/course
                     onPress={() => router.replace('/auth/course')} 
                     style={styles.backButton}
                 >
-                    <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+                    <Ionicons name="arrow-back" size={24} color={LIGHT_TEXT_COLOR} />
                 </TouchableOpacity>
 
                 <View style={styles.headerTextContainer}>
-                    <Text style={styles.headerTitle}>{courseName}</Text> 
-                    <Text style={styles.headerSubtitle}>Actividades Pendientes: {pendingActivities.length}</Text>
+                    <Text style={[styles.headerTitle, { color: LIGHT_TEXT_COLOR }]}>{courseName}</Text> 
+                    <Text style={[styles.headerSubtitle, { color: LIGHT_TEXT_COLOR }]}>Actividades Pendientes: {pendingActivities.length}</Text>
                 </View>
             </View>
-            {/* ---------------------------------------------------- */}
+            {/* FIN DEL ENCABEZADO */}
 
             {pendingActivities.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>¡Felicidades! 🎉</Text>
-                    <Text style={styles.emptyText}>No tienes actividades pendientes en este curso.</Text>
-                    <TouchableOpacity style={styles.secondaryBackButton} onPress={() => router.replace('/auth/course')}>
+                    <Text style={[styles.emptyText, { color: ACCENT_TEXT_COLOR }]}>¡Felicidades! 🎉</Text>
+                    <Text style={[styles.emptyText, { color: ACCENT_TEXT_COLOR }]}>No tienes actividades pendientes en este curso.</Text>
+                    <TouchableOpacity style={[styles.secondaryBackButton, { backgroundColor: PRIMARY_COLOR }]} onPress={() => router.replace('/auth/course')}>
                          <Text style={styles.secondaryBackButtonText}>Volver a Cursos</Text>
                     </TouchableOpacity>
                 </View>
@@ -126,29 +143,27 @@ export default function CourseDetailScreen() {
                     contentContainerStyle={{ paddingBottom: 20 }}
                 />
             )}
-        </SafeAreaView>
+        </View>
     );
 }
 
-// ----------------------------------------------------
-// CONFIGURACIÓN CLAVE DE EXPO ROUTER: Ocultar el encabezado por defecto
-// ----------------------------------------------------
+/* CONFIGURACIÓN CLAVE DE EXPO ROUTER: Ocultar el encabezado por defecto */
 CourseDetailScreen.options = {
-  headerShown: false,
+    headerShown: false,
 };
-// ----------------------------------------------------
 
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: BACKGROUND_COLOR },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BACKGROUND_COLOR },
-    loadingText: { marginTop: 10, color: '#333' },
+    container: { flex: 1 },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    loadingText: { marginTop: 10 },
     header: { 
         paddingHorizontal: 20, 
         paddingVertical: 15,
-        backgroundColor: PRIMARY_COLOR, 
         flexDirection: 'row', 
         alignItems: 'center',
+        // 🚨 AJUSTE PARA EVITAR QUE SE PEGUE ARRIBA:
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 40,
     },
     backButton: {
         marginRight: 15,
@@ -157,11 +172,11 @@ const styles = StyleSheet.create({
     headerTextContainer: {
         flexShrink: 1,
     },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
-    headerSubtitle: { fontSize: 14, color: '#FFFFFF', opacity: 0.8 },
+    headerTitle: { fontSize: 20, fontWeight: 'bold' },
+    headerSubtitle: { fontSize: 14, opacity: 0.8 },
     list: { flex: 1, paddingHorizontal: 10, marginTop: 10 },
+    
     activityItem: { 
-        backgroundColor: '#FFFFFF', 
         padding: 15, 
         marginVertical: 8, 
         borderRadius: 10,
@@ -173,27 +188,23 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         borderLeftWidth: 5,
-        borderLeftColor: SECONDARY_COLOR,
     },
     activityInfo: { flexShrink: 1, marginRight: 10 },
-    activityName: { fontSize: 16, fontWeight: '600', color: '#333' },
+    activityName: { fontSize: 16, fontWeight: '600' },
     
     activitySectionType: { 
         fontSize: 12, 
-        color: PRIMARY_COLOR, 
         marginBottom: 4, 
         fontWeight: 'bold'
     },
     
-    // Estos estilos se mantienen pero ya no se usan en renderActivity:
-    activitySection: { fontSize: 12, color: '#666', marginBottom: 4, fontWeight: '500' },
-    activityType: { fontSize: 14, color: PRIMARY_COLOR, fontWeight: 'bold' }, 
+    activitySection: { fontSize: 12, marginBottom: 4, fontWeight: '500' },
+    activityType: { fontSize: 14, fontWeight: 'bold' }, 
 
     emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-    emptyText: { fontSize: 18, textAlign: 'center', color: '#333', marginTop: 10 },
+    emptyText: { fontSize: 18, textAlign: 'center', marginTop: 10 },
     secondaryBackButton: {
         marginTop: 20,
-        backgroundColor: PRIMARY_COLOR,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 25,
