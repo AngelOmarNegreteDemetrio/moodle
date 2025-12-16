@@ -1,9 +1,12 @@
-import { useRouter } from "expo-router";
-import { useState } from "react";
+// app/auth/Login.js
+
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, Image, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View, } from "react-native";
+import Toast from 'react-native-toast-message';
+
 
 import { LoginServices } from "../../services/auth/LoginServices";
-// 🚨 Importar useTheme para acceder al contexto del tema
 import { useTheme } from '../context/themeContext';
 
 const LogoSource = { uri: 'https://soluciones-hericraft.com/iniciar-sesion/pictures/college-logo.png' }; 
@@ -15,16 +18,24 @@ export default function LoginScreen() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
-    // 🚨 OBTENER EL TEMA
     const { theme, isDark } = useTheme();
 
-    // 🚨 DEFINICIÓN DINÁMICA DE COLORES
-    const FORM_BACKGROUND = isDark ? theme.background : 'rgba(255, 255, 255, 0.9)'; // Fondo del formulario semitransparente o sólido
-    const TEXT_COLOR = theme.text; // Color del título y texto general
-    const INPUT_BACKGROUND = isDark ? '#333333' : '#ffffff'; // Fondo de los campos de texto
-    const INPUT_TEXT_COLOR = theme.text; // Color del texto del input
-    const INPUT_BORDER_COLOR = isDark ? '#555' : '#ccc'; // Color del borde del input
-    const PRIMARY_COLOR = isDark ? theme.primary : "#E83E4C"; // Color del botón y enlaces
+    const FORM_BACKGROUND = isDark ? theme.background : 'rgba(255, 255, 255, 0.9)';
+    const TEXT_COLOR = theme.text;
+    const INPUT_BACKGROUND = isDark ? '#333333' : '#ffffff';
+    const INPUT_TEXT_COLOR = theme.text;
+    const INPUT_BORDER_COLOR = isDark ? '#555' : '#ccc';
+    const PRIMARY_COLOR = isDark ? theme.primary : "#E83E4C";
+
+    // Efecto para limpiar los campos cada vez que la pantalla se enfoca
+    useFocusEffect(
+        useCallback(() => {
+            setUsername("");
+            setPassword("");
+            return () => {};
+        }, [])
+    );
+
 
     const handleSignIn = async () => {
         if (!username || !password) {
@@ -36,10 +47,38 @@ export default function LoginScreen() {
 
         try {
             await LoginServices(username, password);
-            Alert.alert("✅ Login exitoso", `Bienvenido ${username}`);
-            router.push("/");
+            
+            Toast.show({
+                type: 'custom_success', 
+                text1: `¡Acceso Exitoso!`,
+                text2: `Bienvenido, ${username}.`,
+                visibilityTime: 2500, 
+                position: 'top',
+                props: { 
+                    isDark: isDark,
+                    theme: theme
+                },
+            });
+            
+            setTimeout(() => {
+                router.push("/");
+            }, 100); 
+
         } catch (error) {
-            Alert.alert("Error de login", error.message);
+            
+            // 🚨 MANEJO DE ERROR MEJORADO 🚨
+            let errorMessage = "Ocurrió un error inesperado al intentar iniciar sesión.";
+
+            // Intentamos extraer el mensaje de error de la respuesta del servicio (ej. Moodle)
+            if (error.message && error.message.includes('invalidlogin')) {
+                errorMessage = "Usuario o contraseña incorrectos.";
+            } else if (error.message) {
+                 // Si hay otro mensaje de error, lo mostramos
+                errorMessage = `Error: ${error.message}`;
+            }
+
+            Alert.alert("Inicio de Sesión Fallido", errorMessage);
+
         } finally {
             setLoading(false);
         }
@@ -49,10 +88,6 @@ export default function LoginScreen() {
         Alert.alert("Enlace", "Navegar a 'Olvidé mi contraseña'");
     };
 
-    /* * MANEJO DE IMAGEN DE FONDO
-     * La imagen de fondo se mantiene para ambos modos, pero el color del texto y la caja de login cambian.
-     * Si deseas una imagen de fondo diferente para el modo oscuro, necesitarías definirla aquí.
-     */
     return (
         <ImageBackground 
             source={BackgroundSource} 
@@ -61,7 +96,6 @@ export default function LoginScreen() {
         >
             <View style={[
                 styles.formContainer,
-                // Aplicamos un fondo al formContainer para que el texto sea legible
                 { backgroundColor: FORM_BACKGROUND }
             ]}>
                 <View style={styles.logoContainer}> 
@@ -72,13 +106,11 @@ export default function LoginScreen() {
                     />
                 </View>
                 
-                {/* 🚨 Aplicamos color dinámico al título */}
                 <Text style={[styles.title, { color: TEXT_COLOR }]}>Iniciar Sesión</Text>
 
                 <TextInput
                     style={[
                         styles.input,
-                        // 🚨 Aplicamos estilos dinámicos al input
                         { 
                             backgroundColor: INPUT_BACKGROUND, 
                             color: INPUT_TEXT_COLOR,
@@ -86,7 +118,7 @@ export default function LoginScreen() {
                         }
                     ]}
                     placeholder="Usuario"
-                    placeholderTextColor={isDark ? '#AAAAAA' : '#999'} // Placeholder oscuro/claro
+                    placeholderTextColor={isDark ? '#AAAAAA' : '#999'}
                     value={username}
                     onChangeText={setUsername}
                     autoCapitalize="none"
@@ -96,7 +128,6 @@ export default function LoginScreen() {
                 <TextInput
                     style={[
                         styles.input,
-                        // 🚨 Aplicamos estilos dinámicos al input
                         { 
                             backgroundColor: INPUT_BACKGROUND, 
                             color: INPUT_TEXT_COLOR,
@@ -111,7 +142,7 @@ export default function LoginScreen() {
                 />
 
                 <TouchableOpacity
-                    style={[styles.button, { backgroundColor: PRIMARY_COLOR }]} // 🚨 Color de botón dinámico
+                    style={[styles.button, { backgroundColor: PRIMARY_COLOR }]}
                     onPress={handleSignIn}
                     disabled={loading}
                 >
@@ -126,7 +157,6 @@ export default function LoginScreen() {
                     onPress={handleForgotPassword}
                     style={styles.forgotPasswordContainer}
                 >
-                    {/* 🚨 Color de enlace dinámico */}
                     <Text style={[styles.forgotPasswordText, { color: PRIMARY_COLOR }]}>Olvidé mi contraseña</Text>
                 </TouchableOpacity>
             </View>
@@ -147,12 +177,12 @@ const styles = StyleSheet.create({
         paddingVertical: 50,
         alignItems: 'center', 
         borderRadius: 10,
-        marginHorizontal: 20, // Añadido para darle espacio lateral y centrar la caja
+        marginHorizontal: 20, 
     },
     
     logoContainer: { 
         alignItems: "center",
-        marginBottom: 30, // Reducido un poco para centrar mejor
+        marginBottom: 30, 
     },
 
     logo: { 
@@ -165,7 +195,6 @@ const styles = StyleSheet.create({
         marginBottom: 30,
         textAlign: "center",
         fontWeight: "600",
-        // Color se aplica dinámicamente
     },
     
     input: {
@@ -176,7 +205,6 @@ const styles = StyleSheet.create({
         padding: 12,
         marginBottom: 18, 
         fontSize: 16,
-        // Colores aplicados dinámicamente
     },
     
     button: {
@@ -186,7 +214,6 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        // Color de fondo dinámico
         shadowColor: "#E83E4C",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -209,6 +236,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         textDecorationLine: 'underline',
-        // Color aplicado dinámicamente
     },
 });

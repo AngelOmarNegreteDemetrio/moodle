@@ -10,7 +10,6 @@ import MenuContent, { CustomHeader } from '../components/navigation/menu';
 
 // Componente Wrapper para acceder al tema
 function AppWrapper() {
-    // Obtenemos theme y isDark
     const { theme, isDark } = useTheme();
 
     return (
@@ -24,28 +23,33 @@ function AppWrapper() {
                     
                     headerShown: true, 
                     
-                    // CAMBIO CRÍTICO AQUÍ: Llamamos a CustomHeader sin pasarle las props de tema
                     header: () => (
                         <CustomHeader 
-                            // Solo pasamos funciones de navegación si las usas internamente
                             onMenuPress={() => navigation.toggleDrawer()} 
-                            // NO PASAR theme ni isDark. CustomHeader las obtiene internamente.
                         />
                     ),
                     
                     drawerType: 'slide', 
                     drawerStyle: { 
                         width: '75%',
-                        // El fondo del menú lateral usa el color del tema
                         backgroundColor: theme.menuBackground,
                     },
-                    // Asegura que el fondo de la pantalla cambie
                     sceneContainerStyle: {
                         backgroundColor: theme.background,
                     }
                 })}
             >
-                {/* Rutas existentes (sin cambios) */}
+                {/* RUTA DE LOGIN: Cabecera OCULTA y se omite del menú Drawer */}
+                <Drawer.Screen 
+                    name="auth/Login" 
+                    options={{ 
+                        headerShown: false, // Oculta la barra de navegación en Login
+                        title: 'Iniciar Sesión',
+                        drawerItemStyle: { display: 'none' } // Oculta el enlace del Drawer
+                    }} 
+                />
+                
+                {/* Otras rutas */}
                 <Drawer.Screen 
                     name="index" 
                     options={{ 
@@ -59,7 +63,7 @@ function AppWrapper() {
                     }} 
                 />
                 <Drawer.Screen 
-                    name="auth/TestScreen" 
+                    name="auth/testScreen" 
                     options={{ 
                         title: 'Mi Rol', 
                     }} 
@@ -68,8 +72,7 @@ function AppWrapper() {
                     name="auth/courseDetail" 
                     options={{ 
                         title: 'Detalle del Curso', 
-                        // 🚨 ¡CAMBIO IMPLEMENTADO! Oculta el encabezado del Drawer/CustomHeader.
-                        headerShown: false,
+                        headerShown: false, // Cabecera oculta para esta ruta también
                     }} 
                 />
                 

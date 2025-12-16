@@ -3,13 +3,9 @@ import axios from "axios";
 import { API_URL } from "../../constants/url";
 
 // ------------------------------------------------------------------
-// 🚀 FUNCIÓN DE CIERRE DE SESIÓN (EXPORTADA)
+// FUNCIÓN DE CIERRE DE SESIÓN
 // ------------------------------------------------------------------
-// 🛑 Esta función debe ser llamada en tu componente de "Cerrar Sesión"
 export async function logoutUser() {
-    console.log("Cerrando sesión: Limpiando datos de Moodle...");
-
-    // Eliminamos las tres claves que guardamos al iniciar sesión
     await AsyncStorage.removeItem("moodleToken");
     await AsyncStorage.removeItem("moodleUserId");
     await AsyncStorage.removeItem("lastLoggedInUsername");
@@ -46,8 +42,6 @@ async function getUserData(token, username) {
 
 export async function LoginServices(username, password) {
     try {
-        // 🛑 NO LLAMAMOS A LA LIMPIEZA AQUÍ. Confiamos en que la función logoutUser() la haga al cerrar sesión.
-
         // 1. OBTENER TOKEN
         const tokenResponse = await axios.post(
             `${API_URL}/login/token.php`,
@@ -75,7 +69,7 @@ export async function LoginServices(username, password) {
         // 2. OBTENER ID DEL USUARIO
         const userDetails = await getUserData(token, username);
 
-        // 3. GUARDAR LA NUEVA SESIÓN (SOBRESCRIBE LA ANTERIOR)
+        // 3. GUARDAR LA NUEVA SESIÓN
         await AsyncStorage.setItem("moodleToken", token);
         await AsyncStorage.setItem("lastLoggedInUsername", username);
         await AsyncStorage.setItem("moodleUserId", userDetails.id.toString());
@@ -89,8 +83,9 @@ export async function LoginServices(username, password) {
         };
 
     } catch (error) {
-        console.error("Error en login Moodle:", error);
-
+        // 🚨 Eliminada la línea console.error() aquí.
+        // Solo relanzamos el error para que sea capturado en la pantalla de Login.
+        
         if (error.response) {
             throw new Error(`Error del servidor: ${error.response.status}. Por favor, verifica tu URL o credenciales.`);
         } else if (error.request) {
