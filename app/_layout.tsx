@@ -4,52 +4,89 @@ import { Drawer } from 'expo-router/drawer';
 import { StatusBar } from "expo-status-bar";
 import React from 'react';
 
-// 🛑 CORRECCIÓN: Importamos AMBOS componentes del mismo archivo 'menu'
-// MenuContent es la exportación por defecto. CustomHeader es la exportación nombrada.
+import { ThemeProvider, useTheme } from '../app/context/themeContext';
 import MenuContent, { CustomHeader } from '../components/navigation/menu';
 
 
+// Componente Wrapper para acceder al tema
+function AppWrapper() {
+    const { theme, isDark } = useTheme();
+
+    return (
+        <>
+            <StatusBar style={isDark ? "light" : "dark"} /> 
+            
+            <Drawer
+                drawerContent={MenuContent}
+                
+                screenOptions={({ navigation }) => ({
+                    
+                    headerShown: true, 
+                    
+                    header: () => (
+                        <CustomHeader 
+                            onMenuPress={() => navigation.toggleDrawer()} 
+                        />
+                    ),
+                    
+                    drawerType: 'slide', 
+                    drawerStyle: { 
+                        width: '75%',
+                        backgroundColor: theme.menuBackground,
+                    },
+                    sceneContainerStyle: {
+                        backgroundColor: theme.background,
+                    }
+                })}
+            >
+                {/* RUTA DE LOGIN: Cabecera OCULTA y se omite del menú Drawer */}
+                <Drawer.Screen 
+                    name="auth/Login" 
+                    options={{ 
+                        headerShown: false, // Oculta la barra de navegación en Login
+                        title: 'Iniciar Sesión',
+                        drawerItemStyle: { display: 'none' } // Oculta el enlace del Drawer
+                    }} 
+                />
+                
+                {/* Otras rutas */}
+                <Drawer.Screen 
+                    name="index" 
+                    options={{ 
+                        title: 'College', 
+                    }} 
+                />
+                <Drawer.Screen 
+                    name="auth/course" 
+                    options={{ 
+                        title: 'Mis Cursos', 
+                    }} 
+                />
+                <Drawer.Screen 
+                    name="auth/testScreen" 
+                    options={{ 
+                        title: 'Mi Rol', 
+                    }} 
+                />
+                <Drawer.Screen 
+                    name="auth/courseDetail" 
+                    options={{ 
+                        title: 'Detalle del Curso', 
+                        headerShown: false, // Cabecera oculta para esta ruta también
+                    }} 
+                />
+                
+            </Drawer>
+        </>
+    );
+}
+
+
+// El Layout principal ENGLOBA toda la aplicación con el ThemeProvider
 export default function MainLayout() {
-  return (
-    <>
-      <StatusBar style="light" /> 
-      
-      <Drawer
-        // Pasamos la referencia de la función para el contenido del Drawer
-        drawerContent={MenuContent}
-        
-        // 🛑 screenOptions DEBE SER UNA FUNCIÓN PARA ACCEDER A 'navigation'
-        screenOptions={({ navigation }) => ({
-          
-          // 1. Mantenemos 'true' para que el Drawer nos permita reemplazar el header
-          headerShown: true, 
-          
-          // 2. 🛑 FORZAMOS AL DRAWER A USAR TU COMPONENTE DE BARRA ROJA COMPLETO
-          // Usamos la prop 'header' para inyectar tu CustomHeader
-          header: () => (
-            // CustomHeader es el componente que tiene el estilo rojo, el título, y la campana.
-            <CustomHeader onMenuPress={() => navigation.toggleDrawer()} />
-          ),
-          
-          drawerType: 'slide', 
-          drawerStyle: { width: '75%' },
-        })}
-      >
-        {/* Las rutas no necesitan headerRight ni title, ya que CustomHeader lo maneja todo */}
-        <Drawer.Screen 
-          name="index" 
-          options={{ 
-            title: 'College', 
-          }} 
-        />
-        <Drawer.Screen 
-          name="auth/course" 
-          options={{ 
-            title: 'Mis Cursos', 
-          }} 
-        />
-        
-      </Drawer>
-    </>
-  );
+    return (
+        <ThemeProvider>
+            <AppWrapper />
+        </ThemeProvider>
+    );
 }

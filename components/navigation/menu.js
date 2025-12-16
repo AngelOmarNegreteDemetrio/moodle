@@ -1,9 +1,8 @@
-// app/components/navigation/menu.js
-
 import Entypo from '@expo/vector-icons/Entypo';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DrawerContentScrollView } from '@react-navigation/drawer';
+import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -11,55 +10,74 @@ import {
     Dimensions,
     Platform,
     StatusBar as RNStatusBar,
+    StatusBar,
     StyleSheet,
+    Switch,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
 
+import { useTheme } from '../../app/context/themeContext';
+
 const HEADER_HEIGHT = 70;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-// Paleta de Colores
+/* Paleta de Colores base UNIFICADA */
 const COLLEGE_COLORS = {
-    PRIMARY_RED: '#E83E4C', 
-    BACKGROUND_LIGHT: '#FFFFFF', 
-    TEXT_DARK: '#212121', 
-    BORDER_LIGHT: '#E0E0E0', 
+    COLOR_CLARO_COINCIDENTE: '#FF0000', 
+    COLOR_OSCURO_COINCIDENTE: '#F55D69', 
     LOGOUT_RED: '#D32F2F', 
-    ACTIVE_RED: '#E83E4C', 
     WHITE: '#FFFFFF',
 };
 
+// ===========================================
+// 1. CUSTOM HEADER (Barra Superior) - SIN CAMBIOS
+// ===========================================
 
 export function CustomHeader({ onMenuPress }) { 
-    // ... (El código de CustomHeader no ha cambiado)
+    const { isDark } = useTheme(); 
+    const navigation = useNavigation();
+    
+    const headerColor = isDark 
+        ? COLLEGE_COLORS.COLOR_OSCURO_COINCIDENTE 
+        : COLLEGE_COLORS.COLOR_CLARO_COINCIDENTE; 
+    
+    const iconColor = COLLEGE_COLORS.WHITE; 
+
     const handleGoToNotifications = () => {
         Alert.alert("Notificaciones", "La vista de Notificaciones aún no está implementada.");
     };
 
     return (
         <View style={{ zIndex: 100 }}>
-            {/* BARRA DE ENCABEZADO */}
-            <View style={headerStyles.header}>
+            <StatusBar
+                barStyle={isDark ? "light-content" : "dark-content"}
+                backgroundColor={headerColor} 
+            />
+            
+            <View style={[
+                headerStyles.header, 
+                { backgroundColor: headerColor } 
+            ]}>
                 
-                {/* Botón de Menú: Abre el Drawer */}
-                <TouchableOpacity style={headerStyles.menuButton} onPress={onMenuPress}>
-                    <Entypo name="menu" size={34} color={COLLEGE_COLORS.WHITE} />
+                <TouchableOpacity 
+                    style={headerStyles.menuButton} 
+                    onPress={onMenuPress || (() => navigation.openDrawer())}
+                >
+                    <Entypo name="menu" size={34} color={iconColor} />
                 </TouchableOpacity>
 
                 <Text style={headerStyles.headerTitle}>College</Text>
 
-                {/* Botón de Notificación (Campana) */}
                 <TouchableOpacity style={headerStyles.notificationButton} onPress={handleGoToNotifications}>
-                    <FontAwesome name="bell" size={24} color={COLLEGE_COLORS.WHITE} />
+                    <FontAwesome name="bell" size={24} color={iconColor} />
                 </TouchableOpacity>
             </View>
         </View>
     );
 }
 
-// Estilos específicos para el encabezado
 const headerStyles = StyleSheet.create({
     header: {
         flexDirection: 'row',
@@ -70,9 +88,8 @@ const headerStyles = StyleSheet.create({
         paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight + 10 : 10,
         height: HEADER_HEIGHT + (Platform.OS === 'android' ? RNStatusBar.currentHeight : 0),
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+        borderBottomColor: 'rgba(255, 255, 255, 0.2)', 
         zIndex: 100,
-        backgroundColor: COLLEGE_COLORS.PRIMARY_RED,
     },
     headerTitle: {
         fontSize: 24,
@@ -84,25 +101,33 @@ const headerStyles = StyleSheet.create({
 });
 
 
-// ------------------------------------------------------------------
-// 🛑 FUNCIÓN 2: EL CONTENIDO DEL MENÚ (OPCIONES)
-// ------------------------------------------------------------------
+// ===========================================
+// 2. DEFAULT EXPORT (MenuContent del Drawer) - CAMBIOS AQUÍ
+// ===========================================
+
 export default function MenuContent(props) {
     const { navigation } = props;
     const router = useRouter(); 
+    
+    const { theme, isDark, toggleTheme } = useTheme();
+    
+    const menuActiveColor = isDark 
+        ? COLLEGE_COLORS.COLOR_OSCURO_COINCIDENTE 
+        : COLLEGE_COLORS.COLOR_CLARO_COINCIDENTE;
 
-    // Lógica para el estado activo 
+    const activeItemStyle = { backgroundColor: menuActiveColor + '15', }; 
+    const activeTextStyle = { color: menuActiveColor, fontWeight: '700', };
+    const activeIconColor = menuActiveColor;
+
     const isActive = (routeName) => {
-        if (!navigation || !navigation.getState) {
-            return false;
-        }
+        if (!navigation || !navigation.getState) { return false; }
         const state = navigation.getState();
+        // Nota: Si usas Expo Router, el estado de navegación puede ser un poco más complejo. 
+        // Simplificamos asumiendo que el nombre de la ruta es lo que estamos buscando.
         const focusedRoute = state.routes[state.index].name;
-        // La ruta activa debe coincidir con el nombre de la ruta.
         return focusedRoute === routeName;
     };
     
-    // Lógica de navegación 
     const handleGoToLogin = async () => {
         if (navigation) navigation.closeDrawer(); 
         await AsyncStorage.removeItem("moodleToken");
@@ -110,71 +135,108 @@ export default function MenuContent(props) {
         router.replace('/auth/Login'); 
     };
 
-    const handleGoToCourses = () => {
-        // Usamos navigation.navigate('auth/course') para navegar dentro del Drawer
-        if (navigation) navigation.navigate('auth/course'); 
-    };
+    const handleGoToindex = () => { if (navigation) navigation.navigate('index'); }
+    const handleGoToCourses = () => { if (navigation) navigation.navigate('auth/course'); };
+    const handleGoToTest = () => { if (navigation) navigation.navigate('auth/testScreen'); }
     
-    const handleGoToindex = () => {
-        if (navigation) navigation.navigate('index'); 
-    }
+    // 🚨 NUEVA FUNCIÓN DE NAVEGACIÓN PARA EL CV
+    const handleGoToCV = () => { 
+        if (navigation) navigation.navigate('auth/portfolio'); // Asegúrate que esta es la ruta correcta
+    } 
+    
+    const inactiveIconColor = theme.text;
+    const inactiveTextStyle = { color: theme.text };
+    const separatorColor = isDark ? theme.border : '#E0E0E0'; 
 
-    // 🚨 NUEVO HANDLER DE NAVEGACIÓN
-    const handleGoToTest = () => {
-        // CORREGIDO: Usamos 'auth/TestScreen' (con T y S mayúsculas) para que coincida con la ruta de Expo Router
-        if (navigation) navigation.navigate('auth/testScreen'); 
-    }
-    
-    // Estilos condicionales
-    const activeItemStyle = { backgroundColor: COLLEGE_COLORS.PRIMARY_RED + '15', };
-    const activeTextStyle = { color: COLLEGE_COLORS.ACTIVE_RED, fontWeight: '700', };
-    const activeIconColor = COLLEGE_COLORS.ACTIVE_RED;
+    const switchThumbColor = isDark ? COLLEGE_COLORS.WHITE : '#000000'; 
+    const switchTrackColorFalse = isDark ? theme.card : '#F0F0F0';
+    const switchTrackColorTrue = menuActiveColor;
 
     return (
-        <DrawerContentScrollView {...props} contentContainerStyle={styles.container}>
+        <DrawerContentScrollView 
+            {...props} 
+            contentContainerStyle={[styles.container, { backgroundColor: theme.background }]}
+        > 
             <View style={styles.menuItemsContainer}>
 
-                {/* Opción 1: Inicio */}
+                {/* --- ITEMS DE NAVEGACIÓN --- */}
+                
+                {/* INICIO */}
                 <TouchableOpacity 
                     style={[styles.menuItem, isActive('index') && activeItemStyle]} 
                     onPress={handleGoToindex}
                     activeOpacity={0.9} 
                 >
-                    <Text style={[styles.menuItemText, isActive('index') && activeTextStyle]}>
+                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('index') && activeTextStyle]}>
                         Inicio
                     </Text>
-                    <Entypo name="home" size={20} color={isActive('index') ? activeIconColor : COLLEGE_COLORS.TEXT_DARK} />
+                    <Entypo name="home" size={20} color={isActive('index') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
-                {/* Opción 2: Mis Cursos */}
+                {/* MIS CURSOS */}
                 <TouchableOpacity 
                     style={[styles.menuItem, isActive('auth/course') && activeItemStyle]} 
                     onPress={handleGoToCourses}
                     activeOpacity={0.9} 
                 >
-                    <Text style={[styles.menuItemText, isActive('auth/course') && activeTextStyle]}>
+                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('auth/course') && activeTextStyle]}>
                         Mis Cursos
                     </Text>
-                    <FontAwesome name="book" size={20} color={isActive('auth/course') ? activeIconColor : COLLEGE_COLORS.TEXT_DARK} />
+                    <FontAwesome name="book" size={20} color={isActive('auth/course') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
-                {/* 🚨 Opción 3: Realizar Test MBTI */}
+                {/* 🚨 GENERADOR DE CV (PORTFOLIO) 🚨 */}
                 <TouchableOpacity 
-                    // CORREGIDO: Usamos 'auth/TestScreen' (con T y S mayúsculas) para la lógica de estilo activo
+                    style={[styles.menuItem, isActive('auth/portfolio') && activeItemStyle]} 
+                    onPress={handleGoToCV} // Usamos la nueva función
+                    activeOpacity={0.9} 
+                >
+                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('auth/portfolio') && activeTextStyle]}>
+                        Generador de CV
+                    </Text>
+                    {/* Usamos un ícono representativo de documentos o CV */}
+                    <FontAwesome name="id-card-o" size={20} color={isActive('auth/portfolio') ? activeIconColor : inactiveIconColor} />
+                </TouchableOpacity>
+                
+                {/* MI ROL (testScreen) */}
+                <TouchableOpacity 
                     style={[styles.menuItem, isActive('auth/testScreen') && activeItemStyle]} 
                     onPress={handleGoToTest}
                     activeOpacity={0.9} 
                 >
-                    <Text style={[styles.menuItemText, isActive('auth/testScreen') && activeTextStyle]}>
+                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('auth/testScreen') && activeTextStyle]}>
                         Mi Rol
                     </Text>
-                    {/* Usamos un icono de documento/archivo para representar el test */}
-                    <FontAwesome name="file-text-o" size={20} color={isActive('auth/testScreen') ? activeIconColor : COLLEGE_COLORS.TEXT_DARK} />
+                    <FontAwesome name="file-text-o" size={20} color={isActive('auth/testScreen') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
-                <View style={styles.menuSeparator} />
+                {/* SEPARADOR */}
+                <View style={[styles.menuSeparator, { backgroundColor: separatorColor, marginTop: 15 }]} />
+                
+                <Text style={[styles.sectionTitle, { color: theme.text + '99' }]}>
+                    APARIENCIA
+                </Text>
 
-                {/* Opción 4: Cerrar Sesión */}
+                {/* CONTENEDOR DEL MODO OSCURO */}
+                <View style={styles.themeToggleContainer}> 
+                    <Text style={[styles.menuItemText, inactiveTextStyle]}>
+                        Modo Oscuro
+                    </Text>
+                    <Switch
+                        trackColor={{ 
+                            false: switchTrackColorFalse, 
+                            true: switchTrackColorTrue
+                        }}
+                        thumbColor={switchThumbColor} 
+                        ios_backgroundColor={switchTrackColorFalse}
+                        onValueChange={toggleTheme}
+                        value={isDark}
+                    />
+                </View>
+
+                {/* SEPARADOR */}
+                <View style={[styles.menuSeparator, { backgroundColor: separatorColor, marginBottom: 15 }]} />
+
                 <TouchableOpacity 
                     style={styles.menuItem} 
                     onPress={handleGoToLogin}
@@ -190,11 +252,29 @@ export default function MenuContent(props) {
     );
 }
 
-// Estilos específicos para el contenido del menú
+// ... (Los estilos permanecen igual)
+
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLLEGE_COLORS.BACKGROUND_LIGHT, },
+    container: { flex: 1, },
     menuItemsContainer: { flex: 1, paddingVertical: 4, },
     menuItem: { paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', },
-    menuItemText: { fontSize: 15, color: COLLEGE_COLORS.TEXT_DARK, fontWeight: '500', },
-    menuSeparator: { height: 1, backgroundColor: COLLEGE_COLORS.BORDER_LIGHT, marginVertical: 4, marginHorizontal: 10, }
+    menuItemText: { fontSize: 15, fontWeight: '500', },
+    menuSeparator: { height: 1, marginVertical: 4, marginHorizontal: 10, },
+    
+    sectionTitle: { 
+        fontSize: 12,
+        fontWeight: '600',
+        paddingHorizontal: 20,
+        marginTop: 20, 
+        marginBottom: 5,
+        textTransform: 'uppercase',
+    },
+
+    themeToggleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+    }
 });

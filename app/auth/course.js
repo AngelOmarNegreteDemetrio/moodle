@@ -13,21 +13,18 @@ import {
     View
 } from 'react-native';
 
-// Asegúrate de que esta ruta sea correcta para tu servicio
+import { useTheme } from '../../app/context/themeContext';
 import { getEnrolledCourses } from '../../services/auth/courseServices';
-
-const PRIMARY_COLOR = '#E83E4C'; 
-const BACKGROUND_COLOR = '#f5f5f5'; 
 
 export default function CourseScreen() { 
     const router = useRouter();
+    const { theme, isDark } = useTheme();
 
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
     
-    // Mantenemos los estados de colapso si los quieres seguir usando
     const [isEnrolledExpanded, setIsEnrolledExpanded] = useState(true);
     const [isCompletedExpanded, setIsCompletedExpanded] = useState(true); 
 
@@ -35,8 +32,6 @@ export default function CourseScreen() {
         if (!isRefreshing) setLoading(true); 
         setError(null);
         try {
-            // Se llama al servicio que SOLO trae la lista básica de cursos, 
-            // SIN hacer llamadas adicionales para el progreso.
             const data = await getEnrolledCourses(); 
             setCourses(Array.isArray(data) ? data : []); 
         } catch (err) {
@@ -50,7 +45,6 @@ export default function CourseScreen() {
         }
     }, []); 
 
-    // --- FUNCIÓN DE CLIC PARA NAVEGAR A DETALLE ---
     const handleCoursePress = (courseId, courseName) => {
         router.push({
             pathname: "/auth/courseDetail", 
@@ -60,7 +54,6 @@ export default function CourseScreen() {
             } 
         });
     };
-    // ---------------------------------------------
 
     useFocusEffect(
         useCallback(() => {
@@ -73,12 +66,22 @@ export default function CourseScreen() {
         fetchCourses(true);
     };
 
+    // --- VARIABLES DE TEMA OPTIMIZADAS ---
+    // 🚨 1. Color primario para el modo oscuro (menos saturado)
+    const primaryColorOptimized = isDark ? '#F55D69' : theme.primary; 
+
+    // 2. Color secundario (gris)
+    const secondaryTextColor = isDark ? '#AAAAAA' : '#666666'; 
+    
+    // 3. Color de separador (ultra-sutil)
+    const separatorColor = isDark ? theme.background : '#F0F0F0'; 
+
     if (loading && !refreshing) {
         return (
-            <SafeAreaView style={styles.safeArea}>
-                <View style={styles.centerContainer}>
-                    <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-                    <Text style={styles.loadingText}>Cargando cursos...</Text>
+            <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+                <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+                    <ActivityIndicator size="large" color={theme.primary} />
+                    <Text style={[styles.loadingText, { color: secondaryTextColor }]}>Cargando cursos...</Text>
                 </View>
             </SafeAreaView>
         );
@@ -86,8 +89,8 @@ export default function CourseScreen() {
 
     if (error) {
         return (
-            <SafeAreaView style={styles.safeArea}>
-                <View style={styles.centerContainer}>
+            <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+                <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
                     <Text style={styles.errorText}>❌ Error al cargar los datos:</Text>
                     <Text style={styles.errorText}>{error}</Text>
                 </View>
@@ -95,45 +98,57 @@ export default function CourseScreen() {
         );
     }
 
-    // 🚨 CAMBIO CLAVE: Ya no podemos filtrar por progreso. 
-    // Usaremos todos los cursos como "Inscritos" por simplicidad.
-    const allCourses = courses; 
-    
-    // Si necesitas las secciones, necesitarás una forma alternativa de dividir los cursos (ej. por categoría o estado manual)
-    // Para simplificar y mantener la estructura, colocamos todos en "Cursos Inscritos" (enrolledCourses)
-    const enrolledCourses = allCourses;
-    const completedCourses = []; // Dejamos esta lista vacía a menos que tengas otra forma de identificarlos.
+    const enrolledCourses = courses;
+    const completedCourses = []; 
     
 
-    // --- RENDERIZADO DEL ÍTEM DE CURSO (SIMPLIFICADO) ---
-    const renderCourseItem = ({ item }) => (
-        <TouchableOpacity 
-            style={styles.courseItem}
-            onPress={() => handleCoursePress(item.id, item.fullname)}
-        >
-            {/* Solo mostramos el nombre y el ID */}
-            <View> 
-                <Text style={styles.courseTitle}>{item.fullname}</Text>
-                <Text style={styles.courseSubtitle}>ID Moodle: {item.id}</Text> 
-            </View>
-            {/* 🛑 Eliminamos el View style={styles.progressContainer} y el Text style={styles.progressText} */}
-        </TouchableOpacity>
-    );
+    // --- RENDERIZADO DEL ÍTEM DE CURSO ---
+    const renderCourseItem = ({ item, index }) => {
+        const isLastItem = index === enrolledCourses.length - 1; 
+
+        return (
+            <TouchableOpacity 
+                style={[
+                    styles.courseItem, 
+                    { 
+                        backgroundColor: theme.card,
+                        borderBottomColor: separatorColor,
+                        borderBottomWidth: isLastItem ? 0 : 1 
+                    }
+                ]}
+                onPress={() => handleCoursePress(item.id, item.fullname)}
+            >
+                <View> 
+                    <Text style={[styles.courseTitle, { color: theme.text }]}>{item.fullname}</Text>
+                    <Text style={[styles.courseSubtitle, { color: secondaryTextColor }]}>ID Moodle: {item.id}</Text> 
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
     // --- VISTA PRINCIPAL (FINAL) ---
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
             
             <ScrollView
-                style={styles.scrollView}
+                style={[styles.scrollView, { backgroundColor: theme.background }]}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[PRIMARY_COLOR]} />
+                    // 🚨 Usamos el color optimizado para el control de recarga si es necesario
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[primaryColorOptimized]} /> 
                 }
             >
                 
                 {/* CURSOS INSCRITOS */}
                 <TouchableOpacity 
-                    style={styles.sectionHeader} 
+                    style={[
+                        styles.sectionHeader, 
+                        { 
+                            // 🚨 USAMOS EL COLOR PRIMARIO OPTIMIZADO
+                            backgroundColor: primaryColorOptimized, 
+                            shadowOpacity: isDark ? 0.05 : 0.1, 
+                            elevation: isDark ? 0 : 3
+                        }
+                    ]} 
                     onPress={() => setIsEnrolledExpanded(!isEnrolledExpanded)}
                 >
                     <Text style={styles.sectionTitle}>Cursos Inscritos ({enrolledCourses.length})</Text>
@@ -149,16 +164,45 @@ export default function CourseScreen() {
                         renderItem={renderCourseItem}
                         keyExtractor={item => `enrolled-${item.id.toString()}`}
                         scrollEnabled={false} 
-                        style={styles.flatList}
+                        style={[
+                            styles.flatList, 
+                            { 
+                                backgroundColor: theme.card, 
+                                borderWidth: 0, 
+                                borderTopWidth: 0, 
+                            }
+                        ]}
                     />
                 ) : (
-                    !loading && isEnrolledExpanded && <Text style={styles.noResultsText}>No hay cursos en progreso.</Text>
+                    !loading && isEnrolledExpanded && (
+                        <Text style={[
+                            styles.noResultsText, 
+                            { 
+                                color: secondaryTextColor, 
+                                backgroundColor: theme.card, 
+                                borderColor: theme.border,
+                                borderWidth: 1, 
+                                borderTopWidth: 0,
+                            }
+                        ]}>
+                            No hay cursos en progreso.
+                        </Text>
+                    )
                 )}
                 
                 
-                {/* CURSOS TERMINADOS - ESTA SECCIÓN NO MOSTRARÁ NADA AHORA */}
+                {/* CURSOS TERMINADOS */}
                 <TouchableOpacity 
-                    style={[styles.sectionHeader, { marginTop: 20 }]}
+                    style={[
+                        styles.sectionHeader, 
+                        { 
+                            marginTop: 20, 
+                            // 🚨 USAMOS EL COLOR PRIMARIO OPTIMIZADO
+                            backgroundColor: primaryColorOptimized,
+                            shadowOpacity: isDark ? 0.05 : 0.1, 
+                            elevation: isDark ? 0 : 3
+                        }
+                    ]}
                     onPress={() => setIsCompletedExpanded(!isCompletedExpanded)}
                 >
                     <Text style={styles.sectionTitle}>Cursos Terminados ({completedCourses.length})</Text>
@@ -174,10 +218,30 @@ export default function CourseScreen() {
                         renderItem={renderCourseItem}
                         keyExtractor={item => `completed-${item.id.toString()}`}
                         scrollEnabled={false}
-                        style={styles.flatList}
+                        style={[
+                            styles.flatList, 
+                            { 
+                                backgroundColor: theme.card, 
+                                borderWidth: 0, 
+                                borderTopWidth: 0,
+                            }
+                        ]}
                     />
                 ) : (
-                    !loading && isCompletedExpanded && <Text style={styles.noResultsText}>No hay resultados para mostrar.</Text>
+                    !loading && isCompletedExpanded && (
+                        <Text style={[
+                            styles.noResultsText, 
+                            { 
+                                color: secondaryTextColor, 
+                                backgroundColor: theme.card, 
+                                borderColor: theme.border,
+                                borderWidth: 1,
+                                borderTopWidth: 0,
+                            }
+                        ]}>
+                            No hay resultados para mostrar.
+                        </Text>
+                    )
                 )}
                 
                 
@@ -188,45 +252,32 @@ export default function CourseScreen() {
     );
 }
 
-// --- ESTILOS (MODIFICADOS) ---
+// --- ESTILOS FIJOS (Sin cambios en esta sección) ---
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: BACKGROUND_COLOR, 
-    },
-    scrollView: {
-        flex: 1,
-        backgroundColor: BACKGROUND_COLOR, 
-    },
+    safeArea: { flex: 1, },
+    scrollView: { flex: 1, },
     flatList: {
-        backgroundColor: 'white',
         marginHorizontal: 15,
         borderBottomLeftRadius: 8,
         borderBottomRightRadius: 8,
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#eee',
-        borderTopWidth: 0,
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: BACKGROUND_COLOR,
     },
     loadingText: {
         marginTop: 10,
         fontSize: 16,
-        color: '#666',
     },
     errorText: {
         fontSize: 16,
-        color: 'red',
+        color: 'red', 
         textAlign: 'center',
         paddingHorizontal: 20,
     },
     sectionHeader: {
-        backgroundColor: PRIMARY_COLOR, 
         padding: 15,
         marginHorizontal: 15,
         marginTop: 15,
@@ -235,28 +286,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderTopLeftRadius: 8,
         borderTopRightRadius: 8,
-        elevation: 3,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
         shadowRadius: 4,
     },
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: 'white',
+        color: 'white', 
     },
     collapseIcon: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: 'white',
+        color: 'white', 
     },
-    // Estilo del item ahora es un TouchableOpacity
     courseItem: { 
-        backgroundColor: '#fff',
         padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -264,26 +309,17 @@ const styles = StyleSheet.create({
     courseTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#333',
-        // 🚨 CAMBIO: Ajustamos el maxWidth para que el título use todo el espacio disponible
         maxWidth: '100%', 
     },
     courseSubtitle: {
         fontSize: 13,
-        color: '#666',
         marginTop: 4,
     },
-    // 🛑 Eliminamos progressContainer y progressText.
     noResultsText: {
         padding: 15,
         marginHorizontal: 15,
-        color: '#666',
-        backgroundColor: '#fff',
         borderBottomLeftRadius: 8,
         borderBottomRightRadius: 8,
         marginBottom: 10,
-        borderWidth: 1,
-        borderColor: '#eee',
-        borderTopWidth: 0,
     }
 });

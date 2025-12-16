@@ -4,15 +4,21 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 
+// 🚨 Importar useTheme para acceder al contexto del tema
+import { useTheme } from '../context/themeContext';
+
 // URL del Test (la que nos proporcionaste)
 const TEST_URL = "https://education.soluciones-hericraft.com/user/test-roles/test-liderazgo.html"; 
 
-// 🚨 CORRECCIÓN: Nombre del componente con mayúscula inicial para coincidir con la ruta
 export default function TestScreen() { 
+    // 🚨 OBTENER EL TEMA: Usamos el hook para obtener el objeto 'theme'
+    const { theme } = useTheme();
+
+    // El color de fondo del contenedor debe ser el color de fondo del tema
+    const containerBackgroundColor = theme.background; 
 
     return (
-        // Usamos SafeAreaView para manejar la barra de estado y la muesca (notch)
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: containerBackgroundColor }]}>
             <WebView 
                 source={{ uri: TEST_URL }} 
                 style={styles.webView} 
@@ -28,8 +34,7 @@ export default function TestScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        // Opcional: define un color de fondo si el WebView no cubre toda la pantalla.
-        backgroundColor: '#FFFFFF', 
+        // Eliminamos el color fijo de aquí, ahora lo aplicamos dinámicamente arriba
     },
     webView: {
         flex: 1,
