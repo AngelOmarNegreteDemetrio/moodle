@@ -32,13 +32,10 @@ const COLLEGE_COLORS = {
 };
 
 // ===========================================
-// 1. CUSTOM HEADER (Barra Superior) - CORRECCIÓN FINAL
+// 1. CUSTOM HEADER (Barra Superior) - SIN CAMBIOS
 // ===========================================
 
-// 🚨 CAMBIO CLAVE: Aceptamos la prop onMenuPress (viene de _layout.tsx)
 export function CustomHeader({ onMenuPress }) { 
-    
-    // Obtenemos el tema DIRECTAMENTE para forzar la actualización al cambiar el modo
     const { isDark } = useTheme(); 
     const navigation = useNavigation();
     
@@ -64,7 +61,6 @@ export function CustomHeader({ onMenuPress }) {
                 { backgroundColor: headerColor } 
             ]}>
                 
-                {/* 🚨 Usamos la prop onMenuPress para abrir el cajón 🚨 */}
                 <TouchableOpacity 
                     style={headerStyles.menuButton} 
                     onPress={onMenuPress || (() => navigation.openDrawer())}
@@ -106,7 +102,7 @@ const headerStyles = StyleSheet.create({
 
 
 // ===========================================
-// 2. DEFAULT EXPORT (MenuContent del Drawer)
+// 2. DEFAULT EXPORT (MenuContent del Drawer) - CAMBIOS AQUÍ
 // ===========================================
 
 export default function MenuContent(props) {
@@ -126,6 +122,8 @@ export default function MenuContent(props) {
     const isActive = (routeName) => {
         if (!navigation || !navigation.getState) { return false; }
         const state = navigation.getState();
+        // Nota: Si usas Expo Router, el estado de navegación puede ser un poco más complejo. 
+        // Simplificamos asumiendo que el nombre de la ruta es lo que estamos buscando.
         const focusedRoute = state.routes[state.index].name;
         return focusedRoute === routeName;
     };
@@ -137,10 +135,14 @@ export default function MenuContent(props) {
         router.replace('/auth/Login'); 
     };
 
-    const handleGoToCourses = () => { if (navigation) navigation.navigate('auth/course'); };
     const handleGoToindex = () => { if (navigation) navigation.navigate('index'); }
+    const handleGoToCourses = () => { if (navigation) navigation.navigate('auth/course'); };
     const handleGoToTest = () => { if (navigation) navigation.navigate('auth/testScreen'); }
     
+    // 🚨 NUEVA FUNCIÓN DE NAVEGACIÓN PARA EL CV
+    const handleGoToCV = () => { 
+        if (navigation) navigation.navigate('auth/portfolio'); // Asegúrate que esta es la ruta correcta
+    } 
     
     const inactiveIconColor = theme.text;
     const inactiveTextStyle = { color: theme.text };
@@ -158,6 +160,8 @@ export default function MenuContent(props) {
             <View style={styles.menuItemsContainer}>
 
                 {/* --- ITEMS DE NAVEGACIÓN --- */}
+                
+                {/* INICIO */}
                 <TouchableOpacity 
                     style={[styles.menuItem, isActive('index') && activeItemStyle]} 
                     onPress={handleGoToindex}
@@ -169,6 +173,7 @@ export default function MenuContent(props) {
                     <Entypo name="home" size={20} color={isActive('index') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
+                {/* MIS CURSOS */}
                 <TouchableOpacity 
                     style={[styles.menuItem, isActive('auth/course') && activeItemStyle]} 
                     onPress={handleGoToCourses}
@@ -180,6 +185,20 @@ export default function MenuContent(props) {
                     <FontAwesome name="book" size={20} color={isActive('auth/course') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
+                {/* 🚨 GENERADOR DE CV (PORTFOLIO) 🚨 */}
+                <TouchableOpacity 
+                    style={[styles.menuItem, isActive('auth/portfolio') && activeItemStyle]} 
+                    onPress={handleGoToCV} // Usamos la nueva función
+                    activeOpacity={0.9} 
+                >
+                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('auth/portfolio') && activeTextStyle]}>
+                        Generador de CV
+                    </Text>
+                    {/* Usamos un ícono representativo de documentos o CV */}
+                    <FontAwesome name="id-card-o" size={20} color={isActive('auth/portfolio') ? activeIconColor : inactiveIconColor} />
+                </TouchableOpacity>
+                
+                {/* MI ROL (testScreen) */}
                 <TouchableOpacity 
                     style={[styles.menuItem, isActive('auth/testScreen') && activeItemStyle]} 
                     onPress={handleGoToTest}
@@ -232,6 +251,8 @@ export default function MenuContent(props) {
         </DrawerContentScrollView>
     );
 }
+
+// ... (Los estilos permanecen igual)
 
 const styles = StyleSheet.create({
     container: { flex: 1, },
