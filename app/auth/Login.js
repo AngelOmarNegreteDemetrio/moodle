@@ -2,7 +2,18 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Image, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View, } from "react-native";
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    ImageBackground,
+    Linking,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import Toast from 'react-native-toast-message';
 
 
@@ -11,6 +22,10 @@ import { useTheme } from '../context/themeContext';
 
 const LogoSource = { uri: 'https://soluciones-hericraft.com/iniciar-sesion/pictures/college-logo.png' }; 
 const BackgroundSource = { uri: 'https://soluciones-hericraft.com/iniciar-sesion/pictures/fondo2.png' }; 
+
+// 🚨 URL ESPECÍFICA PARA LA RECUPERACIÓN DE CONTRASEÑA
+const FORGOT_PASSWORD_URL = "https://prueba.soluciones-hericraft.com/login/forgot_password.php"; 
+
 
 export default function LoginScreen() {
     const [username, setUsername] = useState("");
@@ -66,14 +81,12 @@ export default function LoginScreen() {
 
         } catch (error) {
             
-            // 🚨 MANEJO DE ERROR MEJORADO 🚨
+            // MANEJO DE ERROR
             let errorMessage = "Ocurrió un error inesperado al intentar iniciar sesión.";
 
-            // Intentamos extraer el mensaje de error de la respuesta del servicio (ej. Moodle)
             if (error.message && error.message.includes('invalidlogin')) {
                 errorMessage = "Usuario o contraseña incorrectos.";
             } else if (error.message) {
-                 // Si hay otro mensaje de error, lo mostramos
                 errorMessage = `Error: ${error.message}`;
             }
 
@@ -84,8 +97,20 @@ export default function LoginScreen() {
         }
     };
 
-    const handleForgotPassword = () => {
-        Alert.alert("Enlace", "Navegar a 'Olvidé mi contraseña'");
+    // 🚨 FUNCIÓN MEJORADA: Abrir enlace de recuperación en el navegador
+    const handleForgotPassword = async () => {
+        
+        const supported = await Linking.canOpenURL(FORGOT_PASSWORD_URL);
+
+        if (supported) {
+            // Abre la URL en el navegador web del dispositivo
+            await Linking.openURL(FORGOT_PASSWORD_URL);
+        } else {
+            Alert.alert(
+                "Error de Navegación", 
+                `No se puede abrir la URL: ${FORGOT_PASSWORD_URL}. Por favor contacte soporte.`
+            );
+        }
     };
 
     return (
@@ -154,7 +179,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                    onPress={handleForgotPassword}
+                    onPress={handleForgotPassword} // 🚨 Llama a la nueva función de Linking
                     style={styles.forgotPasswordContainer}
                 >
                     <Text style={[styles.forgotPasswordText, { color: PRIMARY_COLOR }]}>Olvidé mi contraseña</Text>
