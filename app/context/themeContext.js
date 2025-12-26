@@ -2,35 +2,38 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Appearance } from 'react-native'; // Para detectar el tema del sistema
+import { Appearance } from 'react-native';
 
 // 1. Definimos el Contexto
 const ThemeContext = createContext();
 
-// 2. Definimos los Colores (Puedes expandir esta lista)
+// 2. Definimos los Colores (AÑADIMOS textSecondary)
 export const lightTheme = {
-    background: '#F5F5F5', // Fondo claro principal
-    text: '#1C1C1C',       // Texto oscuro
-    primary: '#FF0000',    // Color principal (el rojo de tu header)
-    card: '#FFFFFF',       // Fondo de tarjetas/contenedores
-    menuBackground: '#FFFFFF', // Fondo del Drawer
+    background: '#F5F5F5',
+    text: '#1C1C1C',
+    textSecondary: '#666666', // Gris oscuro para descripciones en modo claro
+    primary: '#FF0000',
+    card: '#FFFFFF',
+    menuBackground: '#FFFFFF',
+    border: '#E0E0E0', // Añadimos border para consistencia
 };
 
 export const darkTheme = {
-    background: '#121212', // Fondo oscuro principal
-    text: '#E0E0E0',       // Texto claro
-    primary: '#CF6679',    // Un color que destaque en oscuro (puedes mantener el rojo o usar uno más suave)
-    card: '#1F1F1F',       // Fondo de tarjetas/contenedores
-    menuBackground: '#1C1C1C', // Fondo del Drawer
+    background: '#121212',
+    text: '#E0E0E0',
+    textSecondary: '#A9A9A9', // Gris claro para descripciones en modo oscuro (¡Esto resuelve el problema!)
+    primary: '#CF6679',
+    card: '#1F1F1F',
+    menuBackground: '#1C1C1C',
+    border: '#333333', // Añadimos border para consistencia
 };
 
-// 3. Proveedor del Contexto
+// 3. Proveedor del Contexto (El código interno no necesita cambios, está correcto)
 export const ThemeProvider = ({ children }) => {
-    // Inicialmente, intenta obtener el tema guardado, o usa la preferencia del sistema
     const [isDark, setIsDark] = useState(Appearance.getColorScheme() === 'dark');
     const theme = isDark ? darkTheme : lightTheme;
 
-    // useEffect para cargar la preferencia guardada al inicio
+    // ... (rest of useEffect code for loading theme)
     useEffect(() => {
         const loadTheme = async () => {
             try {
@@ -38,7 +41,6 @@ export const ThemeProvider = ({ children }) => {
                 if (storedTheme !== null) {
                     setIsDark(storedTheme === 'dark');
                 } else {
-                    // Si no hay preferencia, escucha el tema del sistema
                     const systemTheme = Appearance.getColorScheme();
                     setIsDark(systemTheme === 'dark');
                 }
@@ -49,7 +51,6 @@ export const ThemeProvider = ({ children }) => {
         loadTheme();
     }, []);
 
-    // Función para cambiar y guardar la preferencia
     const toggleTheme = async () => {
         const newIsDark = !isDark;
         setIsDark(newIsDark);
