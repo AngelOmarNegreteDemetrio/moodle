@@ -1,75 +1,24 @@
-import Entypo from '@expo/vector-icons/Entypo';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from 'react-native';
-
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getCVData, getPhoneNumber } from '../../services/auth/dataServices';
 import { useTheme } from '../context/themeContext';
 
-const stripHtml = (html) => {
-    if (!html) return '';
-    
-    let cleanText = html.replace(/<[^>]*>/g, ''); 
-    cleanText = cleanText.replace(/&nbsp;/g, ' ').trim(); 
-    
-    return cleanText.replace(/\s+/g, ' ').trim(); 
+const stripHtml = (html) => html ? html.replace(/<[^>]*>/g, '').trim() : '';
+
+// --- LÓGICA DE TEXTOS PROFESIONALES ---
+const GET_DESC = (course, index) => {
+    const isDone = course.progress >= 99 || course.completed;
+    const name = course.fullname;
+
+    // Texto solicitado por el usuario adaptado al estatus
+    if (isDone) {
+        return `Dominio en ${name}: Desarrollo de competencias analíticas y técnicas aplicadas al área, con un enfoque práctico en la resolución de problemas y la implementación de proyectos específicos del sector.`;
+    } else {
+        return `En formación: Desarrollo de competencias analíticas y técnicas aplicadas a ${name}, trabajando bajo un enfoque práctico en la resolución de problemas e implementación de proyectos institucionales.`;
+    }
 };
-
-const getCourseYear = (course) => {
-    return course.startdate && course.startdate > 0 
-        ? new Date(course.startdate * 1000).getFullYear() 
-        : new Date().getFullYear();
-};
-
-// 🚨 FUNCIÓN FINAL Y MEJORADA: MÁS VARIEDAD Y MENOS REPETICIÓN SIN IA 🚨
-const generateCompetencyDescription = (course) => {
-    const courseTitle = (course.shortname || course.fullname || '');
-    
-    // Lista A: Sustantivos de Habilidad (Énfasis en lo que se obtuvo)
-    const skillNouns = [
-        "Desarrollo", "Implementación", "Diseño", "Análisis", "Dominio", 
-        "Gestión", "Estrategia", "Optimización", "Evaluación", "Fundamentos"
-    ];
-    
-    // Lista B: Focos del Logro (Énfasis en el área de aplicación)
-    const focusNouns = [
-        "soluciones complejas", "proyectos específicos del área", "metodologías clave", 
-        "principios esenciales", "iniciativas de alto impacto", "desafíos técnicos"
-    ];
-
-    // Seleccionamos elementos basándonos en el título del curso (para pseudo-aleatoriedad)
-    const skillIndex = courseTitle.toUpperCase().charCodeAt(0) % skillNouns.length;
-    const skillNoun = skillNouns[skillIndex];
-    
-    const focusIndex = courseTitle.length % focusNouns.length;
-    const focusNoun = focusNouns[focusIndex];
-
-    
-    // Plantillas de CV enfocadas en Certificación y Logro (6 plantillas para mayor variedad)
-    const templates = [
-        `Certificado en ${courseTitle}, con ${skillNoun.toLowerCase()} avanzado de ${focusNoun}.`,
-        `Certificación lograda en ${courseTitle}, aplicando ${skillNoun.toLowerCase()} en la ejecución de ${focusNoun}.`,
-        `Certificación completada en ${courseTitle}, enfocada en el ${skillNoun.toLowerCase()} de ${focusNoun}.`,
-        `Logro de competencias en ${courseTitle}, validando el ${skillNoun.toLowerCase()} de ${focusNoun}.`,
-        `Certificado en ${courseTitle}, lo que avala el ${skillNoun.toLowerCase()} de técnicas para ${focusNoun}.`,
-        `Formación especializada en ${courseTitle}, destacando por el ${skillNoun.toLowerCase()} de ${focusNoun}.`
-    ];
-    
-    // Elegimos una plantilla diferente para cada curso
-    const templateIndex = (courseTitle.length + courseTitle.toUpperCase().charCodeAt(1) % 3) % templates.length;
-    
-    return templates[templateIndex];
-};
-
 
 export default function CVGeneratorScreen() {
     const [data, setData] = useState(null);
@@ -78,239 +27,113 @@ export default function CVGeneratorScreen() {
     const { theme, isDark } = useTheme();
     
     const loadData = useCallback(() => {
-        async function fetchData() {
+        (async () => {
             setLoading(true);
             try {
-                // 1. Cargamos el ID del usuario del AsyncStorage
-                const userId = await AsyncStorage.getItem("moodleUserId");
-                const numericUserId = parseInt(userId);
-                
-                // 2. Cargamos los datos básicos del CV (la llamada que no falla)
-                const cvData = await getCVData(); 
+                const [userId, cvData] = await Promise.all([
+                    AsyncStorage.getItem("moodleUserId"),
+                    getCVData()
+                ]);
                 setData(cvData);
-                
-                // 3. Cargamos el teléfono por separado (la llamada que puede fallar sin detener el resto)
-                if (numericUserId) {
-                    const phone = await getPhoneNumber(numericUserId);
-                    setPhoneNumber(phone);
-                }
-                
-            } catch (error) {
-                Alert.alert("Error de Carga", error.message);
-                setData({ userDetails: {}, userCourses: [] }); 
-            } finally {
-                setLoading(false);
-            }
-        }
-        
-        fetchData(); 
+                if (userId) setPhoneNumber(await getPhoneNumber(parseInt(userId)));
+            } catch (e) {
+                Alert.alert("Error", "No se pudo sincronizar el perfil.");
+            } finally { setLoading(false); }
+        })();
     }, []); 
 
     useFocusEffect(loadData); 
 
-    if (loading) {
-        return (
-            <View style={[styles.center, { backgroundColor: theme.background }]}>
-                <ActivityIndicator size="large" color={theme.primary} />
-                <Text style={{ color: theme.text, marginTop: 10 }}>Generando CV...</Text>
-            </View>
-        );
-    }
-
-    const user = data?.userDetails || {};
-    const courses = data?.userCourses || [];
-    const profileImageUrl = user.profileimageurl || 'https://via.placeholder.com/150'; 
-    const PRIMARY_COLOR = isDark ? theme.primary : "#E83E4C"; 
-    const SECONDARY_TEXT_COLOR = theme.textSecondary || '#A9A9A9';
-    const MAIN_TEXT_COLOR = theme.text || '#1C1C1C';
-    
-    const userPhone = phoneNumber; 
-    const userAddress = user.address || `${user.city || ''}, ${user.country || ''}`.trim().replace(/^, |^,|^, $/g, '') || 'No disponible';
-
-    const skills = courses.map(c => c.shortname.split(' ')[0] || c.fullname).slice(0, 5); 
-    
-    const renderContactInfo = () => (
-        <View style={styles.contactContainer}>
-            {/* EMAIL */}
-            <View style={styles.contactItem}>
-                <Entypo name="mail" size={16} color={MAIN_TEXT_COLOR} style={{ marginRight: 8 }} />
-                <Text style={[styles.contactText, { color: MAIN_TEXT_COLOR }]}>{user.email || 'N/A'}</Text>
-            </View>
-            {/* TELÉFONO - Usando el nuevo estado */}
-            <View style={styles.contactItem}>
-                <Entypo name="phone" size={16} color={MAIN_TEXT_COLOR} style={{ marginRight: 8 }} />
-                <Text style={[styles.contactText, { color: MAIN_TEXT_COLOR }]}>{userPhone}</Text>
-            </View>
-            {/* DIRECCIÓN */}
-            <View style={styles.contactItem}>
-                <Entypo name="location-pin" size={16} color={MAIN_TEXT_COLOR} style={{ marginRight: 8 }} />
-                <Text style={[styles.contactText, { color: MAIN_TEXT_COLOR }]}>{userAddress}</Text>
-            </View>
+    if (loading) return (
+        <View style={[styles.center, { backgroundColor: theme.background }]}>
+            <ActivityIndicator size="large" color={theme.primary} />
         </View>
     );
 
-    const renderSection = (title, content) => (
-        <View style={styles.cvSection}>
-            <Text style={[styles.sectionTitle, { color: MAIN_TEXT_COLOR }]}>{title}</Text>
-            <View style={[styles.sectionDivider, { backgroundColor: PRIMARY_COLOR }]} />
-            {content}
-        </View>
-    );
-    
-    const getCourseDescription = (course) => {
-        const cleanedSummary = stripHtml(course.summary);
-        
-        // Criterio de profesionalismo: existe, es largo, y no contiene saludos.
-        const isProfessionalSummary = cleanedSummary 
-            && cleanedSummary.length > 10 
-            && !cleanedSummary.toLowerCase().includes("bienvenido")
-            && !cleanedSummary.toLowerCase().includes("welcome");
-
-        // 1. Prioridad: Resumen del curso si es profesional
-        if (isProfessionalSummary) {
-            return cleanedSummary.substring(0, 150) + '...';
-        }
-        
-        // 2. Último Recurso: Generar texto profesional con enfoque en logros
-        return generateCompetencyDescription(course);
-    };
+    const { userDetails: user, userCourses: courses, userBadges: badges } = data || {};
+    const PRIMARY = isDark ? theme.primary : "#E83E4C"; 
+    const TEXT_STYLE = { color: theme.text };
+    const SUB_STYLE = { color: theme.textSecondary || '#666' };
 
     return (
-        <ScrollView 
-            style={[styles.container, { backgroundColor: theme.background }]}
-            contentContainerStyle={styles.contentContainer}
-        >
-            {/* CABECERA: Dividida en dos columnas para foto y datos */}
-            <View style={styles.headerLayout}>
-                
-                {/* 1. FOTO DE PERFIL */}
-                <View style={styles.photoContainer}>
-                    <Image 
-                        source={{ uri: profileImageUrl }} 
-                        style={[styles.profileImage, { borderColor: PRIMARY_COLOR }]} 
-                    />
-                </View>
-
-                {/* 2. NOMBRE Y CONTACTO */}
-                <View style={styles.infoContainer}>
-                    <Text style={[styles.name, { color: MAIN_TEXT_COLOR }]}>{user.fullname || 'NOMBRE COMPLETO'}</Text>
-                    <Text style={[styles.jobTitle, { color: PRIMARY_COLOR }]}>Estudiante / Aspirante Profesional</Text>
-                    <View style={[styles.cvHeaderDivider, { borderBottomColor: PRIMARY_COLOR }]} />
-                    {renderContactInfo()}
+        <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.container}>
+            
+            {/* 1. CABECERA */}
+            <View style={styles.header}>
+                <Image source={{ uri: user?.profileimageurl }} style={[styles.img, { borderColor: PRIMARY }]} />
+                <View style={{ flex: 1 }}>
+                    <Text style={[styles.name, TEXT_STYLE]}>{user?.fullname}</Text>
+                    <Text style={[styles.job, { color: PRIMARY }]}>PERFIL ACADÉMICO PROFESIONAL</Text>
+                    <Text style={[styles.contact, TEXT_STYLE]}>✉️ {user?.email}</Text>
+                    <Text style={[styles.contact, TEXT_STYLE]}>📞 {phoneNumber}</Text>
                 </View>
             </View>
-            
-            <View style={{ marginBottom: 30 }} />
 
-            {/* HABILIDADES CLAVE */}
-            {renderSection(
-                "Habilidades Clave",
-                <View style={styles.skillsContainer}>
-                    {skills.length > 0 ? (
-                        skills.map((skill, index) => (
-                            <View key={index} style={[styles.skillTag, { backgroundColor: SECONDARY_TEXT_COLOR + '10', borderColor: SECONDARY_TEXT_COLOR }]}>
-                                <Text style={{ color: MAIN_TEXT_COLOR, fontWeight: '500', fontSize: 13 }}>{skill}</Text>
+            {/* 2. RESUMEN PROFESIONAL */}
+            {user?.description && (
+                <Section title="Resumen Ejecutivo" color={PRIMARY} textColor={theme.text}>
+                    <View style={[styles.descBox, { borderLeftColor: PRIMARY }]}>
+                        <Text style={[styles.descT, TEXT_STYLE]}>{stripHtml(user.description)}</Text>
+                    </View>
+                </Section>
+            )}
+
+            {/* 3. LOGROS / INSIGNIAS */}
+            {badges?.length > 0 && (
+                <Section title="Certificaciones Académicas" color={PRIMARY} textColor={theme.text}>
+                    <View style={styles.badgeWrap}>
+                        {badges.map((b, i) => (
+                            <View key={i} style={[styles.badge, { backgroundColor: PRIMARY + '15', borderColor: theme.text + '20' }]}>
+                                <Text style={[TEXT_STYLE, styles.badgeText]}>🏆 {b.name}</Text>
                             </View>
-                        ))
-                    ) : (
-                        <Text style={{ color: SECONDARY_TEXT_COLOR, fontSize: 13 }}>Habilidades no definidas automáticamente.</Text>
-                    )}
-                </View>
+                        ))}
+                    </View>
+                </Section>
             )}
 
-            {/* EXPERIENCIA EDUCATIVA (Cursos) */}
-            {renderSection(
-                "Experiencia Educativa",
-                courses.length > 0 ? (
-                    courses.map((course) => (
-                        <View key={course.id} style={styles.cvItem}>
-                            <Text style={[styles.cvItemTitle, { color: MAIN_TEXT_COLOR }]}>{course.fullname}</Text>
-                            <Text style={[styles.cvItemSubtitle, { color: SECONDARY_TEXT_COLOR }]}>
-                                {course.shortname || 'Programa'} | {getCourseYear(course)}
-                            </Text>
-                            <Text style={[styles.cvItemDescription, { color: SECONDARY_TEXT_COLOR }]}>
-                                {getCourseDescription(course)}
-                            </Text>
-                        </View>
-                    ))
-                ) : (
-                    <Text style={{ color: SECONDARY_TEXT_COLOR, fontSize: 13 }}>
-                        No se pudieron cargar los cursos.
-                    </Text>
-                )
-            )}
-            
-            <View style={{ height: 50 }} />
+            {/* 4. HISTORIAL CON TEXTO SOLICITADO */}
+            <Section title="Formación y Competencias" color={PRIMARY} textColor={theme.text}>
+                {courses?.map((c, i) => (
+                    <View key={c.id} style={styles.course}>
+                        <Text style={[styles.cTitle, TEXT_STYLE]}>{c.fullname}</Text>
+                        <Text style={[styles.cMeta, SUB_STYLE]}>{c.shortname.toUpperCase()} | Formación Técnica</Text>
+                        <Text style={[styles.cDesc, SUB_STYLE]}>{GET_DESC(c, i)}</Text>
+                    </View>
+                ))}
+            </Section>
+
+            <View style={{ height: 40 }} />
         </ScrollView>
     );
 }
 
+// Componente de Sección para limpieza de código
+const Section = ({ title, color, textColor, children }) => (
+    <View style={styles.sec}>
+        <Text style={[styles.secT, { color: textColor }]}>{title}</Text>
+        <View style={[styles.line, { backgroundColor: color }]} />
+        {children}
+    </View>
+);
+
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    contentContainer: { paddingVertical: 30, paddingHorizontal: 20 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    
-    // --- ESTILOS DE CABECERA FORMAL (2 Columnas) ---
-    headerLayout: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingBottom: 20,
-    },
-    photoContainer: {
-        marginRight: 20,
-    },
-    profileImage: { 
-        width: 100, 
-        height: 100, 
-        borderRadius: 50, 
-        borderWidth: 3, 
-    },
-    infoContainer: {
-        flex: 1, 
-    },
-    name: { fontSize: 32, fontWeight: '800', marginBottom: 2, }, 
-    jobTitle: { fontSize: 16, fontWeight: '500', marginBottom: 10, }, 
-    cvHeaderDivider: {
-        height: 2,
-        width: '100%',
-        marginBottom: 10,
-        borderBottomWidth: 1,
-    },
-    
-    // --- ESTILOS DE CONTACTO (Más grandes y en columna para claridad) ---
-    contactContainer: { 
-        flexDirection: 'column', 
-        justifyContent: 'flex-start', 
-        marginTop: 5, 
-    },
-    contactItem: { 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        marginVertical: 4, 
-    },
-    contactText: { fontSize: 14, fontWeight: '500' }, 
-    
-    // --- ESTILOS DE SECCIÓN ---
-    cvSection: { marginBottom: 30, paddingHorizontal: 0, },
-    sectionTitle: { 
-        fontSize: 22, 
-        fontWeight: '700', 
-        marginBottom: 8, 
-        textTransform: 'uppercase',
-    },
-    sectionDivider: {
-        height: 3,
-        width: 50,
-        marginBottom: 20,
-    },
-
-    // --- ESTILOS DE ITEM DE CURSO ---
-    cvItem: { marginBottom: 20, },
-    cvItemTitle: { fontSize: 16, fontWeight: '700', marginBottom: 2, },
-    cvItemSubtitle: { fontSize: 13, fontStyle: 'italic', marginBottom: 4, },
-    cvItemDescription: { fontSize: 14, lineHeight: 20, },
-
-    // --- ESTILOS DE HABILIDADES ---
-    skillsContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
-    skillTag: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 5, marginRight: 8, marginBottom: 8, borderWidth: 1, }
+    container: { padding: 25 },
+    center: { flex: 1, justifyContent: 'center' },
+    header: { flexDirection: 'row', marginBottom: 30, alignItems: 'center' },
+    img: { width: 85, height: 85, borderRadius: 12, borderWidth: 2, marginRight: 15 },
+    name: { fontSize: 22, fontWeight: 'bold' },
+    job: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 5 },
+    contact: { fontSize: 12, fontFamily: 'serif', marginTop: 2 },
+    sec: { marginBottom: 35 },
+    secT: { fontSize: 16, fontWeight: 'bold', textTransform: 'uppercase' },
+    line: { height: 3, width: 40, marginTop: 4, marginBottom: 15 },
+    descBox: { paddingLeft: 15, borderLeftWidth: 3, paddingVertical: 2 },
+    descT: { fontSize: 14, fontFamily: 'serif', textAlign: 'justify', fontStyle: 'italic', lineHeight: 20 },
+    badgeWrap: { flexDirection: 'row', flexWrap: 'wrap' },
+    badge: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, marginRight: 8, marginBottom: 8 },
+    badgeText: { fontSize: 12, fontWeight: '600' },
+    course: { marginBottom: 25 },
+    cTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+    cMeta: { fontSize: 11, fontWeight: '600', opacity: 0.7, marginBottom: 6 },
+    cDesc: { fontSize: 13, fontFamily: 'serif', textAlign: 'justify', lineHeight: 18 }
 });
