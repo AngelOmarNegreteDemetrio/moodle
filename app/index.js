@@ -15,12 +15,9 @@ import {
     View,
 } from 'react-native';
 
-import Header from '../components/navigation/menu';
-
-import { GetUserInfoService } from "../services/auth/userServices"; // Tu servicio de Moodle
-
 import { useTheme } from '../app/context/themeContext';
-
+import Header from '../components/navigation/menu';
+import { GetUserInfoService } from "../services/auth/userServices"; // Tu servicio de Moodle
 
 const HEADER_HEIGHT = 70;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -42,26 +39,20 @@ const ProfileImagePlaceholder = { uri: 'https://via.placeholder.co/170/f0f0f0/88
 /* --- FUNCIÓN PRINCIPAL DEL COMPONENTE --- */
 export default function HomeScreen() {
     const router = useRouter();
-
     const { theme, isDark } = useTheme(); 
 
     const [userData, setUserData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [moodleToken, setMoodleToken] = useState(null);
 
+    // 🔔 NUEVA VARIABLE: Solo agregamos este estado para la campana
+    const [hasNotifications, setHasNotifications] = useState(false);
+
     // --- VARIABLES DE TEMA OPTIMIZADAS ---
-    // 🚨 1. Color primario para el modo oscuro (menos saturado: #F55D69)
     const primaryColorOptimized = isDark ? '#F55D69' : theme.primary; 
-
-    // 🚨 2. Color secundario (gris claro en oscuro, gris oscuro en claro)
     const secondaryTextColor = isDark ? '#AAAAAA' : '#666666'; 
-    
-    // 🚨 3. Color de contraste para la tarjeta (blanco o gris muy claro)
     const cardContrastColor = isDark ? theme.background : COLLEGE_COLORS.WHITE;
-    
-    // 🚨 4. Color para el borde/sombra del círculo de perfil (más sutil)
     const profileBorderColor = isDark ? theme.border : COLLEGE_COLORS.WHITE;
-
 
     useFocusEffect(
         useCallback(() => {
@@ -97,7 +88,11 @@ export default function HomeScreen() {
                         type: data.userType,
                     };
 
-                    if (isActive) setUserData(mappedData);
+                    if (isActive) {
+                        setUserData(mappedData);
+                        // 🔔 Lógica para activar la campana (ejemplo: si hay datos, hay avisos)
+                        if (data) setHasNotifications(true);
+                    }
 
                 } catch (error) {
                     console.error("Error al cargar datos del perfil:", error);
@@ -120,7 +115,6 @@ export default function HomeScreen() {
         }, [])
     );
 
-
     if (isLoading || !userData) {
         return (
             <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
@@ -134,7 +128,6 @@ export default function HomeScreen() {
         );
     }
     
-
     const profileImageSource = userData.profileImageUrl && moodleToken
         ? {
             uri: userData.profileImageUrl,
@@ -142,19 +135,16 @@ export default function HomeScreen() {
         }
         : ProfileImagePlaceholder;
 
-
     return (
-        /* El Safe Area superior debe usar el color primario optimizado */
         <SafeAreaView style={[styles.safeArea, { backgroundColor: primaryColorOptimized }]}>
 
             <StatusBar
                 barStyle={isDark ? "light-content" : "dark-content"}
-                backgroundColor={primaryColorOptimized} // 🚨 Usamos el color optimizado
+                backgroundColor={primaryColorOptimized} 
             />
-            {/* I. BARRA DE ENCABEZADO / MENÚ DE NAVEGACIÓN */}
-            <Header />
+            {/* 🔔 AQUÍ AGREGAMOS LA PROP: hasNotifications={hasNotifications} */}
+            <Header hasNotifications={hasNotifications} />
 
-            {/* CONTENIDO PRINCIPAL DESPLAZABLE */}
             <ScrollView
                 style={{ backgroundColor: theme.background }}
                 contentContainerStyle={styles.scrollViewContent}
@@ -166,7 +156,6 @@ export default function HomeScreen() {
                         styles.profileCircle, 
                         { 
                             backgroundColor: theme.card, 
-                            // 🚨 Borde y sombra sutiles
                             borderColor: profileBorderColor, 
                             shadowColor: isDark ? theme.background : '#000',
                         }
@@ -180,14 +169,12 @@ export default function HomeScreen() {
                     </View>
 
                     {userData.type && userData.type !== "Tipo No Definido" && (
-                        // Mantenemos el ACENTO AZUL para diferenciarlo del Rojo Primario (buena práctica)
                         <Text style={[
                             styles.userType, 
                             { 
                                 color: COLLEGE_COLORS.ACCENT_BLUE,
-                                // En modo oscuro, el fondo del tipo debe ser theme.background o transparente
                                 backgroundColor: isDark ? theme.background + '80' : COLLEGE_COLORS.ACCENT_BLUE + '10',
-                                borderColor: COLLEGE_COLORS.ACCENT_BLUE, // Borde fino
+                                borderColor: COLLEGE_COLORS.ACCENT_BLUE, 
                                 borderWidth: 1
                             }
                         ]}>{userData.type}</Text>
@@ -195,18 +182,13 @@ export default function HomeScreen() {
 
                     <Text style={[styles.userName, { color: theme.text }]}>{userData.name}</Text>
                     <Text style={[styles.userGrade, { color: theme.text }]}>{userData.grade}</Text>
-                    
-                    {/* 🚨 Usamos el color secundario corregido */}
                     <Text style={[styles.userEmail, { color: secondaryTextColor }]}>{userData.email}</Text>
                 </View>
 
                 {/* IV. TARJETA DE INFORMACIÓN DESTACADA */}
                 <View style={[
                     styles.highlightCard, 
-                    { 
-                        // 🚨 USAMOS EL COLOR PRIMARIO OPTIMIZADO
-                        backgroundColor: primaryColorOptimized 
-                    }
+                    { backgroundColor: primaryColorOptimized }
                 ]}>
                     <Text style={styles.cardTitle}>Mi Progreso General</Text>
                     <Text style={styles.cardSubtitle}>
@@ -214,17 +196,11 @@ export default function HomeScreen() {
                     </Text>
                     <TouchableOpacity style={[
                         styles.cardButton,
-                        {
-                            // En modo oscuro, el botón tiene un fondo de tarjeta
-                            backgroundColor: cardContrastColor,
-                        }
+                        { backgroundColor: cardContrastColor }
                     ]} onPress={() => console.log("Botón presionado")}>
                         <Text style={[
                             styles.cardButtonText, 
-                            { 
-                                // El texto del botón usa el color primario optimizado
-                                color: primaryColorOptimized 
-                            }
+                            { color: primaryColorOptimized }
                         ]}>Abrir Menú de Navegación</Text>
                     </TouchableOpacity>
                 </View>
@@ -235,13 +211,8 @@ export default function HomeScreen() {
                         Escuela: {userData.school}
                     </Text>
                     <View style={styles.dotsContainer}>
-                        {/* 🚨 Dot 1 usa el color primario optimizado */}
                         <View style={[styles.dot, { backgroundColor: primaryColorOptimized }]} />
-                        
-                        {/* Dot 2 (Amarillo, mantenemos el color fijo si es parte del branding) */}
                         <View style={[styles.dot, { backgroundColor: '#FFA500' }]} /> 
-                        
-                        {/* Dot 3 (Azul de Acento, mantenemos el color fijo si es parte del branding) */}
                         <View style={[styles.dot, { backgroundColor: COLLEGE_COLORS.ACCENT_BLUE }]} />
                     </View>
                 </View>
@@ -251,133 +222,24 @@ export default function HomeScreen() {
     );
 }
 
-
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    scrollViewContent: {
-        paddingHorizontal: 20,
-        alignItems: 'center',
-        flexGrow: 1,
-        justifyContent: 'space-between',
-    },
-
-    /* III. SECCIÓN DE PERFIL (Resto de estilos) */
-    profileSection: {
-        alignItems: 'center',
-        paddingTop: 40,
-        paddingBottom: 20,
-        width: '100%',
-    },
-
-    profileCircle: {
-        width: 170,
-        height: 170,
-        borderRadius: 85,
-        overflow: "hidden",
-        borderWidth: 4,
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.2,
-        shadowRadius: 10,
-        elevation: 10,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 20,
-    },
-
-    profileImage: {
-        width: "100%",
-        height: "100%",
-        borderRadius: 85,
-    },
-
-    userType: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 2,
-        borderRadius: 5,
-    },
-    userName: {
-        fontSize: 22,
-        fontWeight: '700',
-        textAlign: 'center',
-        marginTop: 5,
-    },
-    userGrade: {
-        fontSize: 18,
-        marginTop: 2,
-        marginBottom: 5,
-    },
-    userEmail: {
-        fontSize: 14,
-    },
-
-    /* IV. TARJETA DE INFORMACIÓN DESTACADA */
-    highlightCard: {
-        width: '100%',
-        borderRadius: 15,
-        padding: 25,
-        marginTop: 40,
-        marginBottom: 40,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 8,
-    },
-    cardTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: COLLEGE_COLORS.WHITE, // El fondo de la tarjeta es Primario, el texto es siempre blanco
-        marginBottom: 5,
-    },
-    cardSubtitle: {
-        fontSize: 14,
-        color: COLLEGE_COLORS.WHITE, // El fondo de la tarjeta es Primario, el texto es siempre blanco
-        textAlign: 'center',
-        opacity: 0.9,
-        marginBottom: 15,
-    },
-    cardButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 25,
-        borderRadius: 20,
-        marginTop: 10,
-    },
-    cardButtonText: {
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-
-    /* V. PIE DE PÁGINA / INFORMACIÓN DE ESCUELA */
-    footer: {
-        alignItems: 'center',
-        paddingBottom: 20,
-        width: '100%',
-        marginTop: 'auto',
-    },
-    schoolFooterText: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginTop: 15,
-    },
-    dotsContainer: {
-        flexDirection: 'row',
-        marginTop: 10,
-    },
-    dot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        marginHorizontal: 4,
-    },
+    safeArea: { flex: 1 },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    scrollViewContent: { paddingHorizontal: 20, alignItems: 'center', flexGrow: 1, justifyContent: 'space-between' },
+    profileSection: { alignItems: 'center', paddingTop: 40, paddingBottom: 20, width: '100%' },
+    profileCircle: { width: 170, height: 170, borderRadius: 85, overflow: "hidden", borderWidth: 4, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 10, justifyContent: "center", alignItems: "center", marginBottom: 20 },
+    profileImage: { width: "100%", height: "100%", borderRadius: 85 },
+    userType: { fontSize: 16, fontWeight: '600', marginBottom: 8, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 5 },
+    userName: { fontSize: 22, fontWeight: '700', textAlign: 'center', marginTop: 5 },
+    userGrade: { fontSize: 18, marginTop: 2, marginBottom: 5 },
+    userEmail: { fontSize: 14 },
+    highlightCard: { width: '100%', borderRadius: 15, padding: 25, marginTop: 40, marginBottom: 40, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 5, elevation: 8 },
+    cardTitle: { fontSize: 20, fontWeight: '700', color: COLLEGE_COLORS.WHITE, marginBottom: 5 },
+    cardSubtitle: { fontSize: 14, color: COLLEGE_COLORS.WHITE, textAlign: 'center', opacity: 0.9, marginBottom: 15 },
+    cardButton: { paddingVertical: 10, paddingHorizontal: 25, borderRadius: 20, marginTop: 10 },
+    cardButtonText: { fontWeight: 'bold', fontSize: 16 },
+    footer: { alignItems: 'center', paddingBottom: 20, width: '100%', marginTop: 'auto' },
+    schoolFooterText: { fontSize: 16, fontWeight: '600', marginTop: 15 },
+    dotsContainer: { flexDirection: 'row', marginTop: 10 },
+    dot: { width: 8, height: 8, borderRadius: 4, marginHorizontal: 4 },
 });
