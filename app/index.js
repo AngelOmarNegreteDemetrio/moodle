@@ -1,220 +1,145 @@
+/* --- app/index.js (Perfil Optimizado y Dinámico) --- */
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
-    Dimensions,
+    FlatList,
     Image,
     SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
     Text,
-    TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
 import { useTheme } from '../app/context/themeContext';
 import Header from '../components/navigation/menu';
-import { GetUserInfoService } from "../services/auth/userServices"; // Tu servicio de Moodle
+import { GetUserBadges } from "../services/auth/tasks";
+import { GetUserInfoService } from "../services/auth/userServices";
 
-const HEADER_HEIGHT = 70;
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
-/* ⚠️ NOTA: COLLEGE_COLORS se mantiene como referencia, pero ya no se usa. */
-const COLLEGE_COLORS = {
-    PRIMARY_RED: '#E83E4C',
-    ACCENT_BLUE: '#49B6CC',
-    TEXT_DARK: '#333333',
-    TEXT_LIGHT: '#999999',
-    WHITE: '#FFFFFF',
-    LIGHT_GRAY: '#F5F5F5',
-    PROFILE_CIRCLE: '#DDDDDD',
-    BORDER_LIGHT: '#E0E0E0',
-};
-
-const ProfileImagePlaceholder = { uri: 'https://via.placeholder.co/170/f0f0f0/888888?text=AB' };
-
-/* --- FUNCIÓN PRINCIPAL DEL COMPONENTE --- */
 export default function HomeScreen() {
     const router = useRouter();
     const { theme, isDark } = useTheme(); 
-
     const [userData, setUserData] = useState(null);
+    const [badges, setBadges] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [moodleToken, setMoodleToken] = useState(null);
 
-    // 🔔 NUEVA VARIABLE: Solo agregamos este estado para la campana
-    const [hasNotifications, setHasNotifications] = useState(false);
-
-    // --- VARIABLES DE TEMA OPTIMIZADAS ---
-    const primaryColorOptimized = isDark ? '#F55D69' : theme.primary; 
-    const secondaryTextColor = isDark ? '#AAAAAA' : '#666666'; 
-    const cardContrastColor = isDark ? theme.background : COLLEGE_COLORS.WHITE;
-    const profileBorderColor = isDark ? theme.border : COLLEGE_COLORS.WHITE;
+    const primaryColor = isDark ? '#F55D69' : theme.primary; 
+    const secondaryText = isDark ? '#AAAAAA' : '#666666';
 
     useFocusEffect(
         useCallback(() => {
             let isActive = true;
-
-            const fetchUserData = async () => {
+            const fetchAllData = async () => {
                 setIsLoading(true);
-                setUserData(null);
-                
                 try {
                     const token = await AsyncStorage.getItem("moodleToken");
-                    if (!token) {
-                        router.replace("/auth/Login");
-                        return;
-                    }
-                    if (isActive) setMoodleToken(token);
-
+                    const userId = await AsyncStorage.getItem("moodleUserId");
                     const username = await AsyncStorage.getItem("lastLoggedInUsername");
 
-                    if (!username) {
+                    if (!token || !username) {
                         router.replace("/auth/Login");
                         return;
                     }
 
                     const data = await GetUserInfoService(username, 'username');
+                    const badgesData = await GetUserBadges(token, userId);
 
-                    const mappedData = {
-                        name: data.fullname || "Alumno Desconocido",
-                        grade: data.userGrade,
-                        email: data.email || "Sin correo",
-                        school: "Nuevo Horizontes Global School",
-                        profileImageUrl: data.profileimageurl || null,
-                        type: data.userType,
-                    };
-
-                    if (isActive) {
-                        setUserData(mappedData);
-                        // 🔔 Lógica para activar la campana (ejemplo: si hay datos, hay avisos)
-                        if (data) setHasNotifications(true);
+                    if (isActive && data) {
+                        setUserData({
+                            name: data.fullname,
+                            grade: data.userGrade, 
+                            email: data.email,
+                            profileImageUrl: data.profileimageurl,
+                            city: data.city,
+                            idnumber: data.idnumber, 
+                            level: data.department, // Mapeado directamente de Moodle
+                            school: "Nuevo Horizontes Global School"
+                        });
+                        setBadges(badgesData);
                     }
-
                 } catch (error) {
-                    console.error("Error al cargar datos del perfil:", error);
-                    Alert.alert("Error de Sesión", `No se pudo cargar tu perfil. Razón: ${error.message}. Serás redirigido al Login.`);
-
-                    await AsyncStorage.removeItem("moodleToken");
-                    await AsyncStorage.removeItem("lastLoggedInUsername");
-                    if (isActive) router.replace("/auth/Login");
-
+                    console.error("Error Moodle:", error);
                 } finally {
                     if (isActive) setIsLoading(false);
                 }
             };
-
-            fetchUserData();
-
-            return () => {
-                isActive = false;
-            };
+            fetchAllData();
+            return () => { isActive = false; };
         }, [])
     );
 
     if (isLoading || !userData) {
         return (
-            <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-                <View style={[styles.loadingContainer, {backgroundColor: theme.background}]}>
-                    <ActivityIndicator size="large" color={theme.primary} />
-                    <Text style={{ marginTop: 10, color: theme.text }}>
-                        Cargando datos del alumno...
-                    </Text>
-                </View>
-            </SafeAreaView>
+            <View style={[styles.center, {backgroundColor: theme.background}]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
         );
     }
-    
-    const profileImageSource = userData.profileImageUrl && moodleToken
-        ? {
-            uri: userData.profileImageUrl,
-            headers: { Authorization: `Bearer ${moodleToken}` }
-        }
-        : ProfileImagePlaceholder;
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: primaryColorOptimized }]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: primaryColor }}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={primaryColor} />
+            <Header hasNotifications={true} />
 
-            <StatusBar
-                barStyle={isDark ? "light-content" : "dark-content"}
-                backgroundColor={primaryColorOptimized} 
-            />
-            {/* 🔔 AQUÍ AGREGAMOS LA PROP: hasNotifications={hasNotifications} */}
-            <Header hasNotifications={hasNotifications} />
-
-            <ScrollView
-                style={{ backgroundColor: theme.background }}
-                contentContainerStyle={styles.scrollViewContent}
-            >
-
-                {/* SECCIÓN DE PERFIL PRINCIPAL */}
-                <View style={styles.profileSection}>
-                    <View style={[
-                        styles.profileCircle, 
-                        { 
-                            backgroundColor: theme.card, 
-                            borderColor: profileBorderColor, 
-                            shadowColor: isDark ? theme.background : '#000',
-                        }
-                    ]}>
-                        <Image
-                            key={profileImageSource.uri}
-                            source={profileImageSource}
-                            style={styles.profileImage}
-                            resizeMode="contain"
-                        />
+            <ScrollView style={{ backgroundColor: theme.background }} showsVerticalScrollIndicator={false}>
+                
+                {/* CABECERA */}
+                <View style={styles.sectionCenter}>
+                    <View style={[styles.profileCircle, { backgroundColor: theme.card, borderColor: isDark ? theme.border : '#FFF' }]}>
+                        <Image source={{ uri: userData.profileImageUrl || 'https://via.placeholder.com/150' }} style={styles.fullImg} />
                     </View>
-
-                    {userData.type && userData.type !== "Tipo No Definido" && (
-                        <Text style={[
-                            styles.userType, 
-                            { 
-                                color: COLLEGE_COLORS.ACCENT_BLUE,
-                                backgroundColor: isDark ? theme.background + '80' : COLLEGE_COLORS.ACCENT_BLUE + '10',
-                                borderColor: COLLEGE_COLORS.ACCENT_BLUE, 
-                                borderWidth: 1
-                            }
-                        ]}>{userData.type}</Text>
+                    <Text style={[styles.title, { color: theme.text, marginTop: 15 }]}>{userData.name}</Text>
+                    {userData.grade && (
+                        <View style={[styles.badgeContainer, { backgroundColor: theme.primary + '15' }]}>
+                            <Text style={{ color: theme.primary, fontWeight: 'bold' }}>{userData.grade}</Text>
+                        </View>
                     )}
-
-                    <Text style={[styles.userName, { color: theme.text }]}>{userData.name}</Text>
-                    <Text style={[styles.userGrade, { color: theme.text }]}>{userData.grade}</Text>
-                    <Text style={[styles.userEmail, { color: secondaryTextColor }]}>{userData.email}</Text>
                 </View>
 
-                {/* IV. TARJETA DE INFORMACIÓN DESTACADA */}
-                <View style={[
-                    styles.highlightCard, 
-                    { backgroundColor: primaryColorOptimized }
-                ]}>
-                    <Text style={styles.cardTitle}>Mi Progreso General</Text>
-                    <Text style={styles.cardSubtitle}>
-                        Consulta tus cursos, calificaciones y logros usando el menú superior.
-                    </Text>
-                    <TouchableOpacity style={[
-                        styles.cardButton,
-                        { backgroundColor: cardContrastColor }
-                    ]} onPress={() => console.log("Botón presionado")}>
-                        <Text style={[
-                            styles.cardButtonText, 
-                            { color: primaryColorOptimized }
-                        ]}>Abrir Menú de Navegación</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* INFORMACIÓN DE ESCUELA */}
-                <View style={styles.footer}>
-                    <Text style={[styles.schoolFooterText, { color: theme.text }]}>
-                        Escuela: {userData.school}
-                    </Text>
-                    <View style={styles.dotsContainer}>
-                        <View style={[styles.dot, { backgroundColor: primaryColorOptimized }]} />
-                        <View style={[styles.dot, { backgroundColor: '#FFA500' }]} /> 
-                        <View style={[styles.dot, { backgroundColor: COLLEGE_COLORS.ACCENT_BLUE }]} />
+                {/* MEDALLAS */}
+                <View style={styles.container}>
+                    <View style={styles.rowBetween}>
+                        <Text style={[styles.subTitle, { color: theme.text }]}>Mis Medallas</Text>
+                        <View style={styles.counter}><Text style={styles.counterText}>{badges.length}</Text></View>
                     </View>
+                    
+                    <FlatList
+                        data={badges}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(item) => item.id?.toString()}
+                        renderItem={({ item }) => (
+                            <View style={styles.badgeItem}>
+                                <View style={[styles.badgeCircle, { backgroundColor: theme.card }]}>
+                                    <Image source={{ uri: item.badgeurl }} style={styles.fullImg} resizeMode="contain" />
+                                </View>
+                                <Text numberOfLines={1} style={[styles.smallText, { color: theme.text }]}>{item.name}</Text>
+                            </View>
+                        )}
+                        ListEmptyComponent={<Text style={{color: secondaryText, padding: 10}}>Sin medallas aún.</Text>}
+                    />
+                </View>
+
+                {/* EXPEDIENTE - Simplificado */}
+                <View style={styles.container}>
+                    <Text style={[styles.subTitle, { color: theme.text }]}>Detalles del Expediente</Text>
+                    <View style={[styles.card, { backgroundColor: theme.card }]}>
+                        <InfoRow icon="finger-print" label="Matrícula" value={userData.idnumber || "No asignada"} color="#E83E4C" theme={theme} />
+                        <View style={[styles.sep, { backgroundColor: theme.border }]} />
+                        <InfoRow icon="school" label="Nivel" value={userData.level || "General"} color="#49B6CC" theme={theme} />
+                        <View style={[styles.sep, { backgroundColor: theme.border }]} />
+                        <InfoRow icon="mail" label="Correo" value={userData.email} color="#6C5CE7" theme={theme} />
+                        <View style={[styles.sep, { backgroundColor: theme.border }]} />
+                        <InfoRow icon="location" label="Ciudad" value={userData.city || "Aguascalientes"} color="#FFA500" theme={theme} />
+                    </View>
+                </View>
+
+                <View style={styles.sectionCenter}>
+                    <Text style={{ fontSize: 12, color: secondaryText, marginVertical: 30 }}>{userData.school}</Text>
                 </View>
 
             </ScrollView>
@@ -222,24 +147,43 @@ export default function HomeScreen() {
     );
 }
 
+const InfoRow = ({ icon, label, value, color, theme }) => (
+    <View style={styles.row}>
+        <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
+            <Ionicons name={icon} size={20} color={color} />
+        </View>
+        <View style={{ marginLeft: 15, flex: 1 }}>
+            <Text style={styles.label}>{label}</Text>
+            <Text style={[styles.value, { color: theme.text }]}>{value}</Text>
+        </View>
+    </View>
+);
+
 const styles = StyleSheet.create({
-    safeArea: { flex: 1 },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    scrollViewContent: { paddingHorizontal: 20, alignItems: 'center', flexGrow: 1, justifyContent: 'space-between' },
-    profileSection: { alignItems: 'center', paddingTop: 40, paddingBottom: 20, width: '100%' },
-    profileCircle: { width: 170, height: 170, borderRadius: 85, overflow: "hidden", borderWidth: 4, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 10, justifyContent: "center", alignItems: "center", marginBottom: 20 },
-    profileImage: { width: "100%", height: "100%", borderRadius: 85 },
-    userType: { fontSize: 16, fontWeight: '600', marginBottom: 8, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 5 },
-    userName: { fontSize: 22, fontWeight: '700', textAlign: 'center', marginTop: 5 },
-    userGrade: { fontSize: 18, marginTop: 2, marginBottom: 5 },
-    userEmail: { fontSize: 14 },
-    highlightCard: { width: '100%', borderRadius: 15, padding: 25, marginTop: 40, marginBottom: 40, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 5, elevation: 8 },
-    cardTitle: { fontSize: 20, fontWeight: '700', color: COLLEGE_COLORS.WHITE, marginBottom: 5 },
-    cardSubtitle: { fontSize: 14, color: COLLEGE_COLORS.WHITE, textAlign: 'center', opacity: 0.9, marginBottom: 15 },
-    cardButton: { paddingVertical: 10, paddingHorizontal: 25, borderRadius: 20, marginTop: 10 },
-    cardButtonText: { fontWeight: 'bold', fontSize: 16 },
-    footer: { alignItems: 'center', paddingBottom: 20, width: '100%', marginTop: 'auto' },
-    schoolFooterText: { fontSize: 16, fontWeight: '600', marginTop: 15 },
-    dotsContainer: { flexDirection: 'row', marginTop: 10 },
-    dot: { width: 8, height: 8, borderRadius: 4, marginHorizontal: 4 },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    sectionCenter: { alignItems: 'center', paddingVertical: 20 },
+    container: { paddingHorizontal: 20, marginTop: 20 },
+    row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+    rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    card: { borderRadius: 20, padding: 12, elevation: 3 },
+    
+    // Perfil
+    profileCircle: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, overflow: 'hidden', elevation: 10 },
+    title: { fontSize: 22, fontWeight: 'bold' },
+    badgeContainer: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 15, marginTop: 8 },
+    
+    // Medallas
+    badgeItem: { alignItems: 'center', marginRight: 15, width: 70 },
+    badgeCircle: { width: 55, height: 55, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 2 },
+    
+    // Textos y utilidades
+    subTitle: { fontSize: 14, fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.7 },
+    label: { fontSize: 10, color: '#888', fontWeight: 'bold', textTransform: 'uppercase' },
+    value: { fontSize: 15, fontWeight: '500' },
+    smallText: { fontSize: 10, marginTop: 5, textAlign: 'center' },
+    sep: { height: 1, width: '85%', alignSelf: 'flex-end', opacity: 0.1 },
+    iconBox: { width: 38, height: 38, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+    fullImg: { width: '100%', height: '100%' },
+    counter: { backgroundColor: '#49B6CC', paddingHorizontal: 8, borderRadius: 10 },
+    counterText: { color: 'white', fontSize: 11, fontWeight: 'bold' }
 });

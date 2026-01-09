@@ -1,45 +1,36 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+/* --- app/cv/CVGeneratorScreen.js --- */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { getCVData, getPhoneNumber } from '../../services/auth/dataServices';
+import { getCVData } from '../../services/auth/dataServices';
 import { useTheme } from '../context/themeContext';
 
 const stripHtml = (html) => html ? html.replace(/<[^>]*>/g, '').trim() : '';
 
-// --- LÓGICA DE TEXTOS PROFESIONALES ---
-const GET_DESC = (course, index) => {
+const GET_DESC = (course) => {
     const isDone = course.progress >= 99 || course.completed;
     const name = course.fullname;
-
-    // Texto solicitado por el usuario adaptado al estatus
-    if (isDone) {
-        return `Dominio en ${name}: Desarrollo de competencias analíticas y técnicas aplicadas al área, con un enfoque práctico en la resolución de problemas y la implementación de proyectos específicos del sector.`;
-    } else {
-        return `En formación: Desarrollo de competencias analíticas y técnicas aplicadas a ${name}, trabajando bajo un enfoque práctico en la resolución de problemas e implementación de proyectos institucionales.`;
-    }
+    const base = `Desarrollo de competencias analíticas y técnicas aplicadas a ${name}, con enfoque práctico en resolución de problemas e implementación de proyectos.`;
+    return isDone ? `Dominio en ${name}: ${base}` : `En formación: ${base}`;
 };
 
 export default function CVGeneratorScreen() {
     const [data, setData] = useState(null);
-    const [phoneNumber, setPhoneNumber] = useState('No disponible'); 
     const [loading, setLoading] = useState(true);
     const { theme, isDark } = useTheme();
     
     const loadData = useCallback(() => {
+        let isActive = true;
         (async () => {
             setLoading(true);
             try {
-                const [userId, cvData] = await Promise.all([
-                    AsyncStorage.getItem("moodleUserId"),
-                    getCVData()
-                ]);
-                setData(cvData);
-                if (userId) setPhoneNumber(await getPhoneNumber(parseInt(userId)));
+                const cvData = await getCVData();
+                if (isActive && cvData) setData(cvData);
             } catch (e) {
                 Alert.alert("Error", "No se pudo sincronizar el perfil.");
-            } finally { setLoading(false); }
+            } finally { if (isActive) setLoading(false); }
         })();
+        return () => { isActive = false; };
     }, []); 
 
     useFocusEffect(loadData); 
@@ -52,88 +43,75 @@ export default function CVGeneratorScreen() {
 
     const { userDetails: user, userCourses: courses, userBadges: badges } = data || {};
     const PRIMARY = isDark ? theme.primary : "#E83E4C"; 
-    const TEXT_STYLE = { color: theme.text };
-    const SUB_STYLE = { color: theme.textSecondary || '#666' };
+    const TEXT = { color: theme.text };
+    const SUB = { color: isDark ? '#AAA' : '#666' };
 
     return (
         <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.container}>
             
             {/* 1. CABECERA */}
-            <View style={styles.header}>
-                <Image source={{ uri: user?.profileimageurl }} style={[styles.img, { borderColor: PRIMARY }]} />
-                <View style={{ flex: 1 }}>
-                    <Text style={[styles.name, TEXT_STYLE]}>{user?.fullname}</Text>
+            <View style={styles.row}>
+                <Image source={{ uri: user?.profileimageurl || 'https://via.placeholder.com/150' }} style={[styles.img, { borderColor: PRIMARY }]} />
+                <View style={styles.flex}>
+                    <Text style={[styles.name, TEXT]}>{user?.fullname}</Text>
                     <Text style={[styles.job, { color: PRIMARY }]}>PERFIL ACADÉMICO PROFESIONAL</Text>
-                    <Text style={[styles.contact, TEXT_STYLE]}>✉️ {user?.email}</Text>
-                    <Text style={[styles.contact, TEXT_STYLE]}>📞 {phoneNumber}</Text>
+                    <Text style={[styles.contact, TEXT]}>✉️ {user?.email}</Text>
+                    <Text style={[styles.contact, TEXT]}>📞 {user?.phone2 || user?.phone1 || "No registrado"}</Text>
                 </View>
             </View>
 
-            {/* 2. RESUMEN PROFESIONAL */}
+            {/* 2. RESUMEN */}
             {user?.description && (
-                <Section title="Resumen Ejecutivo" color={PRIMARY} textColor={theme.text}>
+                <Section title="Resumen Ejecutivo" color={PRIMARY} theme={theme}>
                     <View style={[styles.descBox, { borderLeftColor: PRIMARY }]}>
-                        <Text style={[styles.descT, TEXT_STYLE]}>{stripHtml(user.description)}</Text>
+                        <Text style={[styles.descT, TEXT]}>{stripHtml(user.description)}</Text>
                     </View>
                 </Section>
             )}
 
-            {/* 3. LOGROS / INSIGNIAS */}
-            {badges?.length > 0 && (
-                <Section title="Certificaciones Académicas" color={PRIMARY} textColor={theme.text}>
-                    <View style={styles.badgeWrap}>
-                        {badges.map((b, i) => (
-                            <View key={i} style={[styles.badge, { backgroundColor: PRIMARY + '15', borderColor: theme.text + '20' }]}>
-                                <Text style={[TEXT_STYLE, styles.badgeText]}>🏆 {b.name}</Text>
-                            </View>
-                        ))}
-                    </View>
-                </Section>
-            )}
-
-            {/* 4. HISTORIAL CON TEXTO SOLICITADO */}
-            <Section title="Formación y Competencias" color={PRIMARY} textColor={theme.text}>
+            {/* 3. FORMACIÓN (TEXTO COMPLETO) */}
+            <Section title="Formación y Competencias" color={PRIMARY} theme={theme}>
                 {courses?.map((c, i) => (
-                    <View key={c.id} style={styles.course}>
-                        <Text style={[styles.cTitle, TEXT_STYLE]}>{c.fullname}</Text>
-                        <Text style={[styles.cMeta, SUB_STYLE]}>{c.shortname.toUpperCase()} | Formación Técnica</Text>
-                        <Text style={[styles.cDesc, SUB_STYLE]}>{GET_DESC(c, i)}</Text>
+                    <View key={c.id || i} style={styles.itemSpace}>
+                        <Text style={[styles.bold16, TEXT]}>{c.fullname}</Text>
+                        <Text style={[styles.meta, { color: PRIMARY }]}>CURSO INSTITUCIONAL • MOODLE CERTIFIED</Text>
+                        <Text style={[styles.justify13, SUB]}>{GET_DESC(c)}</Text>
                     </View>
                 ))}
             </Section>
-
-            <View style={{ height: 40 }} />
         </ScrollView>
     );
 }
 
-// Componente de Sección para limpieza de código
-const Section = ({ title, color, textColor, children }) => (
+const Section = ({ title, color, theme, children }) => (
     <View style={styles.sec}>
-        <Text style={[styles.secT, { color: textColor }]}>{title}</Text>
+        <Text style={[styles.secT, { color: theme.text }]}>{title}</Text>
         <View style={[styles.line, { backgroundColor: color }]} />
         {children}
     </View>
 );
 
 const styles = StyleSheet.create({
-    container: { padding: 25 },
-    center: { flex: 1, justifyContent: 'center' },
-    header: { flexDirection: 'row', marginBottom: 30, alignItems: 'center' },
-    img: { width: 85, height: 85, borderRadius: 12, borderWidth: 2, marginRight: 15 },
-    name: { fontSize: 22, fontWeight: 'bold' },
-    job: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 5 },
-    contact: { fontSize: 12, fontFamily: 'serif', marginTop: 2 },
-    sec: { marginBottom: 35 },
-    secT: { fontSize: 16, fontWeight: 'bold', textTransform: 'uppercase' },
-    line: { height: 3, width: 40, marginTop: 4, marginBottom: 15 },
+    // Utilidades de Layout
+    container: { padding: 25, paddingBottom: 50 },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    row: { flexDirection: 'row', alignItems: 'center', marginBottom: 35 },
+    flex: { flex: 1 },
+    itemSpace: { marginBottom: 30 },
+    
+    // Componentes Visuales
+    img: { width: 90, height: 90, borderRadius: 15, borderWidth: 2, marginRight: 15 },
+    line: { height: 3, width: 35, marginTop: 5, marginBottom: 20 },
     descBox: { paddingLeft: 15, borderLeftWidth: 3, paddingVertical: 2 },
-    descT: { fontSize: 14, fontFamily: 'serif', textAlign: 'justify', fontStyle: 'italic', lineHeight: 20 },
-    badgeWrap: { flexDirection: 'row', flexWrap: 'wrap' },
-    badge: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, marginRight: 8, marginBottom: 8 },
-    badgeText: { fontSize: 12, fontWeight: '600' },
-    course: { marginBottom: 25 },
-    cTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-    cMeta: { fontSize: 11, fontWeight: '600', opacity: 0.7, marginBottom: 6 },
-    cDesc: { fontSize: 13, fontFamily: 'serif', textAlign: 'justify', lineHeight: 18 }
+    sec: { marginBottom: 35 },
+    
+    // Tipografía Resumida
+    name: { fontSize: 24, fontWeight: 'bold', letterSpacing: -0.5 },
+    job: { fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8, textTransform: 'uppercase' },
+    contact: { fontSize: 12, marginBottom: 2, opacity: 0.9 },
+    secT: { fontSize: 16, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
+    bold16: { fontSize: 16, fontWeight: 'bold' },
+    meta: { fontSize: 10, fontWeight: 'bold', marginBottom: 8, opacity: 0.8 },
+    justify13: { fontSize: 13, textAlign: 'justify', lineHeight: 20 },
+    descT: { fontSize: 14, fontStyle: 'italic', lineHeight: 22, textAlign: 'justify' }
 });
