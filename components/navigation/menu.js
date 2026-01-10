@@ -4,7 +4,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Dimensions,
     Platform,
@@ -16,23 +17,17 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
 import { useTheme } from '../../app/context/themeContext';
 
 const HEADER_HEIGHT = 70;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-/* Paleta de Colores base UNIFICADA */
 const COLLEGE_COLORS = {
     COLOR_CLARO_COINCIDENTE: '#FF0000', 
     COLOR_OSCURO_COINCIDENTE: '#F55D69', 
     LOGOUT_RED: '#D32F2F', 
     WHITE: '#FFFFFF',
 };
-
-// ===========================================
-// 1. CUSTOM HEADER (Barra Superior)
-// ===========================================
 
 export function CustomHeader({ onMenuPress }) { 
     const { isDark } = useTheme(); 
@@ -43,11 +38,6 @@ export function CustomHeader({ onMenuPress }) {
         : COLLEGE_COLORS.COLOR_CLARO_COINCIDENTE; 
     
     const iconColor = COLLEGE_COLORS.WHITE; 
-
-    // ✅ Función de Notificaciones actualizada para navegar
-    const handleGoToNotifications = () => {
-        navigation.navigate('auth/notifications'); 
-    };
 
     return (
         <View style={{ zIndex: 100 }}>
@@ -70,10 +60,9 @@ export function CustomHeader({ onMenuPress }) {
 
                 <Text style={headerStyles.headerTitle}>College</Text>
 
-                <TouchableOpacity style={headerStyles.notificationButton} onPress={handleGoToNotifications}>
+                <TouchableOpacity style={headerStyles.notificationButton} onPress={() => navigation.navigate('auth/notifications')}>
                     <View>
                         <FontAwesome name="bell" size={24} color={iconColor} />
-                        {/* 🔔 Badge de notificación (punto amarillo) */}
                         <View style={headerStyles.badge} />
                     </View>
                 </TouchableOpacity>
@@ -82,27 +71,29 @@ export function CustomHeader({ onMenuPress }) {
     );
 }
 
-// ===========================================
-// 2. DEFAULT EXPORT (MenuContent del Drawer)
-// ===========================================
-
 export default function MenuContent(props) {
+    const { t, i18n } = useTranslation();
     const { navigation } = props;
     const router = useRouter(); 
-    
     const { theme, isDark, toggleTheme } = useTheme();
+
+    const [currentLang, setCurrentLang] = useState(i18n.language);
+    useEffect(() => {
+        setCurrentLang(i18n.language);
+    }, [i18n.language]);
     
     const menuActiveColor = isDark 
         ? COLLEGE_COLORS.COLOR_OSCURO_COINCIDENTE 
         : COLLEGE_COLORS.COLOR_CLARO_COINCIDENTE;
 
-    const activeItemStyle = { backgroundColor: menuActiveColor + '15', }; 
-    const activeTextStyle = { color: menuActiveColor, fontWeight: '700', };
+    const activeItemStyle = { backgroundColor: menuActiveColor + '15' }; 
+    const activeTextStyle = { color: menuActiveColor, fontWeight: '700' };
     const activeIconColor = menuActiveColor;
 
     const isActive = (routeName) => {
-        if (!navigation || !navigation.getState) { return false; }
+        if (!navigation || !navigation.getState) return false;
         const state = navigation.getState();
+        if (!state) return false;
         const focusedRoute = state.routes[state.index].name;
         return focusedRoute === routeName;
     };
@@ -114,12 +105,6 @@ export default function MenuContent(props) {
         router.replace('/auth/Login'); 
     };
 
-    // Funciones de navegación existentes
-    const handleGoToindex = () => { if (navigation) navigation.navigate('index'); }
-    const handleGoToCourses = () => { if (navigation) navigation.navigate('auth/course'); };
-    const handleGoToTest = () => { if (navigation) navigation.navigate('auth/testScreen'); }
-    const handleGoToCV = () => { if (navigation) navigation.navigate('auth/portfolio'); } 
-    
     const inactiveIconColor = theme.text;
     const inactiveTextStyle = { color: theme.text };
     const separatorColor = isDark ? theme.border : '#E0E0E0'; 
@@ -131,56 +116,56 @@ export default function MenuContent(props) {
         > 
             <View style={styles.menuItemsContainer}>
 
-                {/* INICIO */}
                 <TouchableOpacity 
                     style={[styles.menuItem, isActive('index') && activeItemStyle]} 
-                    onPress={handleGoToindex}
+                    onPress={() => navigation?.navigate('index')}
                 >
                     <Text style={[styles.menuItemText, inactiveTextStyle, isActive('index') && activeTextStyle]}>
-                        Inicio
+                        {t('menu.home')}
                     </Text>
                     <Entypo name="home" size={20} color={isActive('index') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
-                {/* MIS CURSOS */}
                 <TouchableOpacity 
                     style={[styles.menuItem, isActive('auth/course') && activeItemStyle]} 
-                    onPress={handleGoToCourses}
+                    onPress={() => navigation?.navigate('auth/course')}
                 >
                     <Text style={[styles.menuItemText, inactiveTextStyle, isActive('auth/course') && activeTextStyle]}>
-                        Mis Cursos
+                        {t('menu.courses')}
                     </Text>
                     <FontAwesome name="book" size={20} color={isActive('auth/course') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
-                {/* GENERADOR DE CV */}
                 <TouchableOpacity 
-                    style={[styles.menuItem, isActive('auth/portfolio') && activeItemStyle]} 
-                    onPress={handleGoToCV}
+                    style={[styles.menuItem, isActive('cv/CVGeneratorScreen') && activeItemStyle]} 
+                    onPress={() => navigation?.navigate('cv/CVGeneratorScreen')}
                 >
-                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('auth/portfolio') && activeTextStyle]}>
-                        Generador de CV
+                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('cv/CVGeneratorScreen') && activeTextStyle]}>
+                        {t('menu.cv')}
                     </Text>
-                    <FontAwesome name="id-card-o" size={20} color={isActive('auth/portfolio') ? activeIconColor : inactiveIconColor} />
+                    <FontAwesome name="id-card-o" size={20} color={isActive('cv/CVGeneratorScreen') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
-                {/* MI ROL */}
                 <TouchableOpacity 
                     style={[styles.menuItem, isActive('auth/testScreen') && activeItemStyle]} 
-                    onPress={handleGoToTest}
+                    onPress={() => navigation?.navigate('auth/testScreen')}
                 >
                     <Text style={[styles.menuItemText, inactiveTextStyle, isActive('auth/testScreen') && activeTextStyle]}>
-                        Mi Rol
+                        {t('menu.profile')}
                     </Text>
                     <FontAwesome name="file-text-o" size={20} color={isActive('auth/testScreen') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
                 <View style={[styles.menuSeparator, { backgroundColor: separatorColor, marginTop: 15 }]} />
                 
-                <Text style={[styles.sectionTitle, { color: theme.text + '99' }]}>APARIENCIA</Text>
+                <Text style={[styles.sectionTitle, { color: theme.text + '99' }]}>
+                    {t('menu.settings_title')}
+                </Text>
 
                 <View style={styles.themeToggleContainer}> 
-                    <Text style={[styles.menuItemText, inactiveTextStyle]}>Modo Oscuro</Text>
+                    <Text style={[styles.menuItemText, inactiveTextStyle]}>
+                        {t('menu.dark_mode')}
+                    </Text>
                     <Switch
                         trackColor={{ false: '#F0F0F0', true: menuActiveColor }}
                         thumbColor={isDark ? COLLEGE_COLORS.WHITE : '#000000'}
@@ -189,10 +174,22 @@ export default function MenuContent(props) {
                     />
                 </View>
 
+                <TouchableOpacity 
+                    style={[styles.menuItem, isActive('auth/language') && activeItemStyle]} 
+                    onPress={() => navigation?.navigate('auth/language')}
+                >
+                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('auth/language') && activeTextStyle]}>
+                        {t('menu.language')}
+                    </Text>
+                    <Entypo name="language" size={20} color={isActive('auth/language') ? activeIconColor : inactiveIconColor} />
+                </TouchableOpacity>
+
                 <View style={[styles.menuSeparator, { backgroundColor: separatorColor, marginBottom: 15 }]} />
 
                 <TouchableOpacity style={styles.menuItem} onPress={handleGoToLogin}>
-                    <Text style={[styles.menuItemText, { color: COLLEGE_COLORS.LOGOUT_RED }]}>Cerrar Sesión</Text>
+                    <Text style={[styles.menuItemText, { color: COLLEGE_COLORS.LOGOUT_RED }]}>
+                        {t('menu.logout')}
+                    </Text>
                     <Entypo name="log-out" size={20} color={COLLEGE_COLORS.LOGOUT_RED} />
                 </TouchableOpacity>
             </View>
@@ -219,7 +216,7 @@ const headerStyles = StyleSheet.create({
         position: 'absolute',
         right: -2,
         top: -2,
-        backgroundColor: '#FFEB3B', // Color amarillo para resaltar sobre el rojo
+        backgroundColor: '#FFEB3B',
         width: 10,
         height: 10,
         borderRadius: 5,

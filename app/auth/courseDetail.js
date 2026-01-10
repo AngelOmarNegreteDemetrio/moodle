@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator, Alert, FlatList,
     Linking,
@@ -15,28 +16,24 @@ import {
 import { GetCourseActivitiesService } from "../../services/auth/courseServices";
 import { useTheme } from '../context/themeContext';
 
-/* Colores unificados para la coherencia del encabezado */
 const COLLEGE_COLORS_COINCIDENTE = {
     CLARO: '#FF0000', 
     OSCURO: '#F55D69', 
     SECONDARY: '#49B6CC',
 };
 
-/* Componente principal */
 export default function CourseDetailScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { courseId, courseName } = useLocalSearchParams(); 
-
     const { theme, isDark } = useTheme();
 
-    /* Definición dinámica de colores */
     const HEADER_COLOR = isDark 
         ? COLLEGE_COLORS_COINCIDENTE.OSCURO 
         : COLLEGE_COLORS_COINCIDENTE.CLARO; 
         
     const ACTIVITY_ACCENT_COLOR = isDark ? theme.primary : COLLEGE_COLORS_COINCIDENTE.SECONDARY; 
     const PRIMARY_COLOR = HEADER_COLOR; 
-    
     const ACCENT_TEXT_COLOR = isDark ? theme.text : '#333'; 
     const CARD_BACKGROUND_COLOR = theme.card; 
     const BACKGROUND_COLOR = theme.background; 
@@ -50,7 +47,7 @@ export default function CourseDetailScreen() {
         const id = parseInt(courseId); 
         
         if (isNaN(id)) {
-            Alert.alert("Error de ID", "ID de curso no válido.");
+            Alert.alert(t('common.error'), t('course_detail.error_id'));
             setIsLoading(false);
             return;
         }
@@ -59,12 +56,11 @@ export default function CourseDetailScreen() {
             const activities = await GetCourseActivitiesService(id);
             setPendingActivities(activities);
         } catch (error) {
-            console.error("Error al cargar actividades:", error);
-            Alert.alert("Error de Carga", error.message);
+            Alert.alert(t('common.error'), error.message);
         } finally {
             setIsLoading(false);
         }
-    }, [courseId]);
+    }, [courseId, t]);
 
     useFocusEffect(
         useCallback(() => {
@@ -75,11 +71,8 @@ export default function CourseDetailScreen() {
     const handleOpenActivity = (url) => {
         if (url) {
             Linking.openURL(url).catch(err => {
-                console.error("Failed to open URL:", err);
-                Alert.alert("Error", "No se pudo abrir el enlace de la actividad.");
+                Alert.alert(t('common.error'), t('course_detail.error_url'));
             });
-        } else {
-            Alert.alert("Error", "URL de actividad no disponible.");
         }
     };
 
@@ -102,15 +95,13 @@ export default function CourseDetailScreen() {
         return (
             <SafeAreaView style={[styles.loadingContainer, { backgroundColor: BACKGROUND_COLOR }]}>
                 <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-                {/* 🚨 CAMBIO DE TEXTO IMPLEMENTADO: */}
-                <Text style={[styles.loadingText, { color: ACCENT_TEXT_COLOR }]}>Cargando...</Text>
+                <Text style={[styles.loadingText, { color: ACCENT_TEXT_COLOR }]}>{t('common.loading')}</Text>
             </SafeAreaView>
         );
     }
 
     return (
         <View style={[styles.container, { backgroundColor: BACKGROUND_COLOR }]}>
-            {/* ENCABEZADO PERSONALIZADO */}
             <View style={[styles.header, { backgroundColor: PRIMARY_COLOR }]}>
                 <TouchableOpacity 
                     onPress={() => router.replace('/auth/course')} 
@@ -121,17 +112,21 @@ export default function CourseDetailScreen() {
 
                 <View style={styles.headerTextContainer}>
                     <Text style={[styles.headerTitle, { color: LIGHT_TEXT_COLOR }]}>{courseName}</Text> 
-                    <Text style={[styles.headerSubtitle, { color: LIGHT_TEXT_COLOR }]}>Actividades Pendientes: {pendingActivities.length}</Text>
+                    <Text style={[styles.headerSubtitle, { color: LIGHT_TEXT_COLOR }]}>
+                        {t('course_detail.pending_activities')}: {pendingActivities.length}
+                    </Text>
                 </View>
             </View>
-            {/* FIN DEL ENCABEZADO */}
 
             {pendingActivities.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                    <Text style={[styles.emptyText, { color: ACCENT_TEXT_COLOR }]}>¡Felicidades! 🎉</Text>
-                    <Text style={[styles.emptyText, { color: ACCENT_TEXT_COLOR }]}>No tienes actividades pendientes en este curso.</Text>
-                    <TouchableOpacity style={[styles.secondaryBackButton, { backgroundColor: PRIMARY_COLOR }]} onPress={() => router.replace('/auth/course')}>
-                         <Text style={styles.secondaryBackButtonText}>Volver a Cursos</Text>
+                    <Text style={[styles.emptyText, { color: ACCENT_TEXT_COLOR }]}>{t('course_detail.congratulations')}</Text>
+                    <Text style={[styles.emptyText, { color: ACCENT_TEXT_COLOR }]}>{t('course_detail.no_pending')}</Text>
+                    <TouchableOpacity 
+                        style={[styles.secondaryBackButton, { backgroundColor: PRIMARY_COLOR }]} 
+                        onPress={() => router.replace('/auth/course')}
+                    >
+                         <Text style={styles.secondaryBackButtonText}>{t('course_detail.back_to_courses')}</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -147,11 +142,9 @@ export default function CourseDetailScreen() {
     );
 }
 
-/* CONFIGURACIÓN CLAVE DE EXPO ROUTER: Ocultar el encabezado por defecto */
 CourseDetailScreen.options = {
     headerShown: false,
 };
-
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
@@ -162,7 +155,6 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         flexDirection: 'row', 
         alignItems: 'center',
-        // 🚨 AJUSTE PARA EVITAR QUE SE PEGUE ARRIBA:
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 40,
     },
     backButton: {
@@ -175,7 +167,6 @@ const styles = StyleSheet.create({
     headerTitle: { fontSize: 20, fontWeight: 'bold' },
     headerSubtitle: { fontSize: 14, opacity: 0.8 },
     list: { flex: 1, paddingHorizontal: 10, marginTop: 10 },
-    
     activityItem: { 
         padding: 15, 
         marginVertical: 8, 
@@ -191,16 +182,11 @@ const styles = StyleSheet.create({
     },
     activityInfo: { flexShrink: 1, marginRight: 10 },
     activityName: { fontSize: 16, fontWeight: '600' },
-    
     activitySectionType: { 
         fontSize: 12, 
         marginBottom: 4, 
         fontWeight: 'bold'
     },
-    
-    activitySection: { fontSize: 12, marginBottom: 4, fontWeight: '500' },
-    activityType: { fontSize: 14, fontWeight: 'bold' }, 
-
     emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
     emptyText: { fontSize: 18, textAlign: 'center', marginTop: 10 },
     secondaryBackButton: {

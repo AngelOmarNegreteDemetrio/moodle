@@ -1,4 +1,3 @@
-/* --- app/index.js (Perfil Optimizado y Dinámico) --- */
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -15,12 +14,15 @@ import {
     View
 } from 'react-native';
 
+// IMPORTACIÓN DEL IDIOMA (Solo para etiquetas de la App)
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../app/context/themeContext';
 import Header from '../components/navigation/menu';
 import { GetUserBadges } from "../services/auth/tasks";
 import { GetUserInfoService } from "../services/auth/userServices";
 
 export default function HomeScreen() {
+    const { t, i18n } = useTranslation(); 
     const router = useRouter();
     const { theme, isDark } = useTheme(); 
     const [userData, setUserData] = useState(null);
@@ -34,32 +36,36 @@ export default function HomeScreen() {
         useCallback(() => {
             let isActive = true;
             const fetchAllData = async () => {
-                setIsLoading(true);
                 try {
                     const token = await AsyncStorage.getItem("moodleToken");
                     const userId = await AsyncStorage.getItem("moodleUserId");
                     const username = await AsyncStorage.getItem("lastLoggedInUsername");
 
-                    if (!token || !username) {
-                        router.replace("/auth/Login");
+                    // Si no hay token, simplemente paramos la carga.
+                    // NO redirigimos al login para evitar cierres de sesión accidentales.
+                    if (!token) {
+                        if (isActive) setIsLoading(false);
                         return;
                     }
 
-                    const data = await GetUserInfoService(username, 'username');
-                    const badgesData = await GetUserBadges(token, userId);
+                    if (username && isActive) {
+                        const data = await GetUserInfoService(username, 'username');
+                        const badgesData = await GetUserBadges(token, userId);
 
-                    if (isActive && data) {
-                        setUserData({
-                            name: data.fullname,
-                            grade: data.userGrade, 
-                            email: data.email,
-                            profileImageUrl: data.profileimageurl,
-                            city: data.city,
-                            idnumber: data.idnumber, 
-                            level: data.department, // Mapeado directamente de Moodle
-                            school: "Nuevo Horizontes Global School"
-                        });
-                        setBadges(badgesData);
+                        if (isActive && data) {
+                            // Se guardan los datos directo de Moodle sin traducción externa
+                            setUserData({
+                                name: data.fullname,
+                                grade: data.userGrade, 
+                                email: data.email,
+                                profileImageUrl: data.profileimageurl,
+                                city: data.city,
+                                idnumber: data.idnumber, 
+                                level: data.department,
+                                school: "Nuevo Horizontes Global School"
+                            });
+                            setBadges(badgesData);
+                        }
                     }
                 } catch (error) {
                     console.error("Error Moodle:", error);
@@ -67,9 +73,10 @@ export default function HomeScreen() {
                     if (isActive) setIsLoading(false);
                 }
             };
+
             fetchAllData();
             return () => { isActive = false; };
-        }, [])
+        }, [i18n.language]) // Escucha el idioma de la app para refrescar UI
     );
 
     if (isLoading || !userData) {
@@ -87,7 +94,7 @@ export default function HomeScreen() {
 
             <ScrollView style={{ backgroundColor: theme.background }} showsVerticalScrollIndicator={false}>
                 
-                {/* CABECERA */}
+                {/* CABECERA PERFIL */}
                 <View style={styles.sectionCenter}>
                     <View style={[styles.profileCircle, { backgroundColor: theme.card, borderColor: isDark ? theme.border : '#FFF' }]}>
                         <Image source={{ uri: userData.profileImageUrl || 'https://via.placeholder.com/150' }} style={styles.fullImg} />
@@ -103,7 +110,9 @@ export default function HomeScreen() {
                 {/* MEDALLAS */}
                 <View style={styles.container}>
                     <View style={styles.rowBetween}>
-                        <Text style={[styles.subTitle, { color: theme.text }]}>Mis Medallas</Text>
+                        <Text style={[styles.subTitle, { color: theme.text }]}>
+                            {t('perfil.mis_medallas')}
+                        </Text>
                         <View style={styles.counter}><Text style={styles.counterText}>{badges.length}</Text></View>
                     </View>
                     
@@ -120,21 +129,47 @@ export default function HomeScreen() {
                                 <Text numberOfLines={1} style={[styles.smallText, { color: theme.text }]}>{item.name}</Text>
                             </View>
                         )}
-                        ListEmptyComponent={<Text style={{color: secondaryText, padding: 10}}>Sin medallas aún.</Text>}
+                        ListEmptyComponent={<Text style={{color: secondaryText, padding: 10}}>{t('perfil.sin_medallas')}</Text>}
                     />
                 </View>
 
-                {/* EXPEDIENTE - Simplificado */}
+                {/* EXPEDIENTE */}
                 <View style={styles.container}>
-                    <Text style={[styles.subTitle, { color: theme.text }]}>Detalles del Expediente</Text>
+                    <Text style={[styles.subTitle, { color: theme.text }]}>
+                        {t('perfil.detalles_expediente')}
+                    </Text>
                     <View style={[styles.card, { backgroundColor: theme.card }]}>
-                        <InfoRow icon="finger-print" label="Matrícula" value={userData.idnumber || "No asignada"} color="#E83E4C" theme={theme} />
+                        <InfoRow 
+                            icon="finger-print" 
+                            label={t('perfil.matricula')} 
+                            value={userData.idnumber || t('perfil.no_asignada')} 
+                            color="#E83E4C" 
+                            theme={theme} 
+                        />
                         <View style={[styles.sep, { backgroundColor: theme.border }]} />
-                        <InfoRow icon="school" label="Nivel" value={userData.level || "General"} color="#49B6CC" theme={theme} />
+                        <InfoRow 
+                            icon="school" 
+                            label={t('perfil.nivel')} 
+                            value={userData.level || t('perfil.general')} 
+                            color="#49B6CC" 
+                            theme={theme} 
+                        />
                         <View style={[styles.sep, { backgroundColor: theme.border }]} />
-                        <InfoRow icon="mail" label="Correo" value={userData.email} color="#6C5CE7" theme={theme} />
+                        <InfoRow 
+                            icon="mail" 
+                            label={t('perfil.correo')} 
+                            value={userData.email} 
+                            color="#6C5CE7" 
+                            theme={theme} 
+                        />
                         <View style={[styles.sep, { backgroundColor: theme.border }]} />
-                        <InfoRow icon="location" label="Ciudad" value={userData.city || "Aguascalientes"} color="#FFA500" theme={theme} />
+                        <InfoRow 
+                            icon="location" 
+                            label={t('perfil.ciudad')} 
+                            value={userData.city || "Aguascalientes"} 
+                            color="#FFA500" 
+                            theme={theme} 
+                        />
                     </View>
                 </View>
 
@@ -147,6 +182,7 @@ export default function HomeScreen() {
     );
 }
 
+// COMPONENTE AUXILIAR (CORREGIDO SIN DIVS)
 const InfoRow = ({ icon, label, value, color, theme }) => (
     <View style={styles.row}>
         <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
@@ -166,17 +202,11 @@ const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
     rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
     card: { borderRadius: 20, padding: 12, elevation: 3 },
-    
-    // Perfil
     profileCircle: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, overflow: 'hidden', elevation: 10 },
     title: { fontSize: 22, fontWeight: 'bold' },
     badgeContainer: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 15, marginTop: 8 },
-    
-    // Medallas
     badgeItem: { alignItems: 'center', marginRight: 15, width: 70 },
     badgeCircle: { width: 55, height: 55, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 2 },
-    
-    // Textos y utilidades
     subTitle: { fontSize: 14, fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.7 },
     label: { fontSize: 10, color: '#888', fontWeight: 'bold', textTransform: 'uppercase' },
     value: { fontSize: 15, fontWeight: '500' },

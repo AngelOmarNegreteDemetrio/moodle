@@ -1,9 +1,9 @@
-// app/auth/notifications.js
-import { Ionicons } from '@expo/vector-icons'; // Para el icono del botón
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Calendar from 'expo-calendar'; // Librería nativa
+import * as Calendar from 'expo-calendar';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Alert,
@@ -15,16 +15,15 @@ import {
     Vibration,
     View
 } from 'react-native';
-import { useTheme } from '../context/themeContext';
-
-// Importamos ambas funciones desde tasks.js
 import { GetMoodleCalendarEvents, GetMoodleNotifications } from "../../services/auth/tasks";
+import { useTheme } from '../context/themeContext';
 
 export default function NotificationsScreen() {
     const { theme } = useTheme();
+    const { t } = useTranslation();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [modalVisible, setModalVisible] = useState(false); // Control del Modal
+    const [modalVisible, setModalVisible] = useState(false);
 
     const loadRealNotifications = async () => {
         setLoading(true);
@@ -36,7 +35,7 @@ export default function NotificationsScreen() {
                 const data = await GetMoodleNotifications(token, userId);
                 const realAlerts = data.map(notif => ({
                     id: notif.id.toString(),
-                    title: notif.subject || "Notificación de Moodle",
+                    title: notif.subject || t('notifications.default_title'),
                     msg: notif.fullmessagehtml 
                         ? notif.fullmessagehtml.replace(/<[^>]*>?/gm, '') 
                         : notif.smallmessage,
@@ -51,11 +50,10 @@ export default function NotificationsScreen() {
         }
     };
 
-    // FUNCIÓN PARA SINCRONIZAR CALENDARIO NATIVO
     const handleSyncCalendar = async () => {
         const { status } = await Calendar.requestCalendarPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert("Permiso requerido", "Necesitamos acceso al calendario para sincronizar tareas.");
+            Alert.alert(t('calendar.permission_denied'), t('calendar.permission_denied'));
             return;
         }
 
@@ -64,12 +62,11 @@ export default function NotificationsScreen() {
             const events = await GetMoodleCalendarEvents(token);
 
             if (events.length === 0) {
-                Alert.alert("Sin eventos", "No se encontraron eventos próximos en Moodle.");
+                Alert.alert(t('calendar.no_events'), t('calendar.no_events'));
                 setModalVisible(false);
                 return;
             }
 
-            // Buscar calendario principal del teléfono
             const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
             const defaultCalendar = calendars.find(cal => cal.isPrimary) || calendars[0];
 
@@ -84,10 +81,9 @@ export default function NotificationsScreen() {
             }
 
             setModalVisible(false);
-            Alert.alert("¡Éxito!", "Tareas sincronizadas con el calendario de tu teléfono.");
+            Alert.alert(t('common.success'), t('calendar.sync_success'));
         } catch (error) {
-            console.error(error);
-            Alert.alert("Error", "No se pudo sincronizar el calendario.");
+            Alert.alert(t('common.error'), t('calendar.sync_error'));
         }
     };
 
@@ -104,15 +100,15 @@ export default function NotificationsScreen() {
     return (
         <View style={{ flex: 1, backgroundColor: theme.background }}>
             <View style={styles.container}>
-                {/* CABECERA CON BOTÓN DE CALENDARIO */}
                 <View style={styles.header}>
-                    <Text style={[styles.title, { color: theme.text }]}>Notificaciones</Text>
+                    <Text style={[styles.title, { color: theme.text }]}>
+                        {t('notifications.title')}
+                    </Text>
                     <TouchableOpacity onPress={() => setModalVisible(true)}>
                         <Ionicons name="calendar-outline" size={28} color={theme.primary} />
                     </TouchableOpacity>
                 </View>
 
-                {/* MODAL EMERGENTE */}
                 <Modal
                     animationType="fade"
                     transparent={true}
@@ -122,20 +118,24 @@ export default function NotificationsScreen() {
                     <View style={styles.modalOverlay}>
                         <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
                             <Ionicons name="cloud-download-outline" size={50} color={theme.primary} />
-                            <Text style={[styles.modalTitle, { color: theme.text }]}>¿Sincronizar Calendario?</Text>
+                            <Text style={[styles.modalTitle, { color: theme.text }]}>
+                                {t('calendar.modal_title')}
+                            </Text>
                             <Text style={[styles.modalText, { color: theme.textSecondary }]}>
-                                Se añadirán tus fechas de entrega de Moodle a la agenda de tu teléfono.
+                                {t('calendar.modal_description')}
                             </Text>
                             
                             <TouchableOpacity 
                                 style={[styles.btnAction, { backgroundColor: theme.primary }]}
                                 onPress={handleSyncCalendar}
                             >
-                                <Text style={styles.btnText}>Sincronizar ahora</Text>
+                                <Text style={styles.btnText}>{t('calendar.sync_now')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <Text style={{ color: '#FF4444', marginTop: 15, fontWeight: 'bold' }}>Cancelar</Text>
+                                <Text style={{ color: '#FF4444', marginTop: 15, fontWeight: 'bold' }}>
+                                    {t('common.cancel')}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -146,7 +146,7 @@ export default function NotificationsScreen() {
                     keyExtractor={item => item.id}
                     ListEmptyComponent={
                         <Text style={{ color: theme.text, textAlign: 'center', marginTop: 20 }}>
-                            No hay notificaciones nuevas en Moodle.
+                            {t('notifications.empty')}
                         </Text>
                     }
                     renderItem={({ item }) => (
@@ -180,7 +180,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2, shadowRadius: 1.41,
     },
     cardTitle: { fontWeight: 'bold', marginBottom: 4 },
-    // ESTILOS DEL MODAL
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',

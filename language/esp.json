@@ -1,0 +1,89 @@
+{
+  "common": {
+    "error": "Error",
+    "loading": "Cargando...",
+    "accept": "Aceptar",
+    "cancel": "Cancelar",
+    "back": "Volver",
+    "success": "¡Éxito!"
+  },
+  "perfil": {
+    "mis_medallas": "Mis Medallas",
+    "sin_medallas": "Sin medallas aún.",
+    "detalles_expediente": "Detalles del Expediente",
+    "matricula": "Matrícula",
+    "nivel": "Nivel",
+    "correo": "Correo",
+    "ciudad": "Ciudad",
+    "no_asignada": "No asignada",
+    "general": "General",
+    "colegio": "Nuevo Horizontes Global School"
+  },
+  "settings": {
+    "language_title": "Seleccionar Idioma",
+    "language_subtitle": "Elige tu idioma de preferencia para la aplicación."
+  },
+  "cv": {
+    "profile_title": "PERFIL ACADÉMICO PROFESIONAL",
+    "no_phone": "No registrado",
+    "summary_title": "Resumen Ejecutivo",
+    "formation_title": "Formación y Competencias",
+    "moodle_certified": "CURSO INSTITUCIONAL • CERTIFICADO MOODLE",
+    "sync_error": "No se pudo sincronizar el perfil.",
+    "mastery": "Dominio en",
+    "training": "En formación",
+    "course_description": "Desarrollo de competencias analíticas y técnicas aplicadas a {{name}}, con enfoque práctico en resolución de problemas e implementación de proyectos."
+  },
+  "menu": {
+    "home": "Inicio",
+    "courses": "Mis Cursos",
+    "cv": "Generador de CV",
+    "profile": "Mi Rol",
+    "language": "Seleccionar Idioma",
+    "logout": "Cerrar Sesión",
+    "settings_title": "Ajustes y Apariencia",
+    "dark_mode": "Modo Oscuro"
+  },
+  "courses": {
+    "title": "Mis Cursos",
+    "no_courses": "No tienes cursos inscritos.",
+    "progress": "Progreso",
+    "completed": "Completado"
+  },
+  "calendar": {
+    "title": "Calendario Moodle",
+    "sync_button": "Sincronizar con mi Celular",
+    "no_events": "No hay eventos próximos.",
+    "sync_success": "Eventos sincronizados con el calendario de tu teléfono.",
+    "sync_error": "No se pudo sincronizar el calendario.",
+    "permission_denied": "Necesitamos acceso al calendario para sincronizar.",
+    "modal_title": "¿Sincronizar Calendario?",
+    "modal_description": "Se añadirán tus fechas de entrega de Moodle a la agenda de tu teléfono.",
+    "sync_now": "Sincronizar ahora"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "empty": "No hay notificaciones nuevas en Moodle.",
+    "default_title": "Notificación de Moodle"
+  },
+  "course_detail": {
+    "pending_activities": "Actividades Pendientes",
+    "congratulations": "¡Felicidades! 🎉",
+    "no_pending": "No tienes actividades pendientes en este curso.",
+    "back_to_courses": "Volver a los Cursos",
+    "error_id": "ID de curso no válido",
+    "error_url": "No se pudo abrir el enlace de la actividad."
+  },
+  "auth": {
+    "login_title": "Iniciar Sesión",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "login_button": "Acceder",
+    "forgot_password": "Olvidé mi contraseña",
+    "error_empty": "Por favor ingresa tu usuario y contraseña.",
+    "error_failed": "Inicio de Sesión Fallido",
+    "error_invalid": "Usuario o contraseña incorrectos.",
+    "success_title": "¡Acceso Exitoso!",
+    "success_message": "Bienvenido."
+  }
+}

@@ -1,34 +1,33 @@
-// app/_layout.tsx
-
 import { Drawer } from 'expo-router/drawer';
 import { StatusBar } from "expo-status-bar";
 import React from 'react';
+import { useTranslation } from 'react-i18next'; // 1. Importar el hook
+
+// IMPORTACIÓN DEL MOTOR DE IDIOMAS
+import '../language/i18n';
 
 import { ThemeProvider, useTheme } from '../app/context/themeContext';
 import MenuContent, { CustomHeader } from '../components/navigation/menu';
 
-
-// Componente Wrapper para acceder al tema
 function AppWrapper() {
     const { theme, isDark } = useTheme();
+    const { i18n } = useTranslation(); // 2. Obtener la instancia de i18n
 
     return (
         <>
             <StatusBar style={isDark ? "light" : "dark"} /> 
             
             <Drawer
-                drawerContent={MenuContent}
+                key={i18n.language} // 3. CLAVE VITAL: Esto fuerza el refresco visual del menú
+                drawerContent={(props) => <MenuContent {...props} />}
                 
                 screenOptions={({ navigation }) => ({
-                    
                     headerShown: true, 
-                    
                     header: () => (
                         <CustomHeader 
                             onMenuPress={() => navigation.toggleDrawer()} 
                         />
                     ),
-                    
                     drawerType: 'slide', 
                     drawerStyle: { 
                         width: '75%',
@@ -39,50 +38,50 @@ function AppWrapper() {
                     }
                 })}
             >
-                {/* RUTA DE LOGIN: Cabecera OCULTA y se omite del menú Drawer */}
                 <Drawer.Screen 
                     name="auth/Login" 
                     options={{ 
-                        headerShown: false, // Oculta la barra de navegación en Login
+                        headerShown: false, 
                         title: 'Iniciar Sesión',
-                        drawerItemStyle: { display: 'none' } // Oculta el enlace del Drawer
+                        drawerItemStyle: { display: 'none' } 
                     }} 
                 />
                 
-                {/* Otras rutas */}
                 <Drawer.Screen 
                     name="index" 
-                    options={{ 
-                        title: 'College', 
-                    }} 
+                    options={{ title: 'College' }} 
                 />
+                
                 <Drawer.Screen 
                     name="auth/course" 
-                    options={{ 
-                        title: 'Mis Cursos', 
-                    }} 
+                    options={{ title: 'Mis Cursos' }} 
                 />
+                
                 <Drawer.Screen 
                     name="auth/testScreen" 
-                    options={{ 
-                        title: 'Mi Rol', 
-                    }} 
+                    options={{ title: 'Mi Rol' }} 
                 />
+                
                 <Drawer.Screen 
                     name="auth/courseDetail" 
                     options={{ 
                         title: 'Detalle del Curso', 
-                        headerShown: false, // Cabecera oculta para esta ruta también
+                        headerShown: false,
                     }} 
                 />
-                
+
+                <Drawer.Screen 
+                    name="auth/language" 
+                    options={{ 
+                        title: 'Idioma',
+                        drawerItemStyle: { display: 'none' }
+                    }} 
+                />
             </Drawer>
         </>
     );
 }
 
-
-// El Layout principal ENGLOBA toda la aplicación con el ThemeProvider
 export default function MainLayout() {
     return (
         <ThemeProvider>
