@@ -102,6 +102,7 @@ export default function MenuContent(props) {
         if (navigation) navigation.closeDrawer(); 
         await AsyncStorage.removeItem("moodleToken");
         await AsyncStorage.removeItem("lastLoggedInUsername");
+        await AsyncStorage.removeItem("moodleUserId");
         router.replace('/auth/Login'); 
     };
 
@@ -137,13 +138,13 @@ export default function MenuContent(props) {
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                    style={[styles.menuItem, isActive('cv/CVGeneratorScreen') && activeItemStyle]} 
-                    onPress={() => navigation?.navigate('cv/CVGeneratorScreen')}
+                    style={[styles.menuItem, isActive('auth/portfolio') && activeItemStyle]} 
+                    onPress={() => navigation?.navigate('auth/portfolio')}
                 >
-                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('cv/CVGeneratorScreen') && activeTextStyle]}>
+                    <Text style={[styles.menuItemText, inactiveTextStyle, isActive('auth/portfolio') && activeTextStyle]}>
                         {t('menu.cv')}
                     </Text>
-                    <FontAwesome name="id-card-o" size={20} color={isActive('cv/CVGeneratorScreen') ? activeIconColor : inactiveIconColor} />
+                    <FontAwesome name="id-card-o" size={20} color={isActive('auth/portfolio') ? activeIconColor : inactiveIconColor} />
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
