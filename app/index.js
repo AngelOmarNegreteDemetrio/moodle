@@ -4,7 +4,6 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
     Dimensions,
     FlatList,
     Image,
@@ -27,7 +26,6 @@ export default function HomeScreen() {
     const { theme, isDark } = useTheme(); 
     const [userData, setUserData] = useState(null);
     const [badges, setBadges] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
 
     const primaryColor = isDark ? '#F55D69' : '#FF0000'; 
     const darkGray = '#1A1A1A';
@@ -41,26 +39,27 @@ export default function HomeScreen() {
                     const userId = await AsyncStorage.getItem("moodleUserId");
                     const username = await AsyncStorage.getItem("lastLoggedInUsername");
 
-                    if (!token || !username) {
-                        if (isActive) setIsLoading(false);
-                        return;
-                    }
+                    if (!token || !username) return;
 
                     const data = await GetUserInfoService(username, 'username');
                     const badgesData = await GetUserBadges(token, userId);
 
                     if (isActive && data) {
-                        const nivel = data.department || "";
-                        const grado = data.userGrade || "";
+                        const nivel = (data.department || "").trim().toUpperCase();
+                        const grado = (data.userGrade || "").trim().toUpperCase();
                         
-                        let displayGrade = "";
+                        let displayGrade = "ESTUDIANTE";
                         if (grado && nivel) {
-                            displayGrade = grado.toLowerCase().includes(nivel.toLowerCase()) 
-                                ? grado.toUpperCase() 
-                                : `${grado} DE ${nivel.toUpperCase()}`;
+                            displayGrade = (grado === nivel) ? grado : `${grado} DE ${nivel}`;
                         } else {
                             displayGrade = grado || nivel || "ESTUDIANTE";
                         }
+
+                        let phoneValue = "No disponible";
+                        if (data.phone1 && data.phone1.trim() !== "") phoneValue = data.phone1;
+                        else if (data.phone2 && data.phone2.trim() !== "") phoneValue = data.phone2;
+                        else if (data.phone && data.phone.trim() !== "") phoneValue = data.phone;
+                        else if (data.mobile && data.mobile.trim() !== "") phoneValue = data.mobile;
 
                         setUserData({
                             name: data.fullname || `${data.firstname} ${data.lastname}`,
@@ -72,15 +71,13 @@ export default function HomeScreen() {
                             fullGrade: displayGrade,
                             description: data.description,
                             school: data.institution || "Nuevo Horizontes Global School",
-                            phone: data.phone1 || data.phone2 || data.phone || "No disponible",
-                            academicScore: 9.4
+                            phone: phoneValue,
+                            academicScore: "9.4 / 10"
                         });
                         setBadges(badgesData || []);
                     }
                 } catch (error) {
-                    console.error("Error Moodle:", error);
-                } finally {
-                    if (isActive) setIsLoading(false);
+                    console.error("Error Home:", error);
                 }
             };
 
@@ -89,12 +86,8 @@ export default function HomeScreen() {
         }, [i18n.language])
     );
 
-    if (isLoading || !userData) {
-        return (
-            <View style={[styles.center, {backgroundColor: theme.background}]}>
-                <ActivityIndicator size="large" color={primaryColor} />
-            </View>
-        );
+    if (!userData) {
+        return <View style={{ flex: 1, backgroundColor: theme.background }} />;
     }
 
     return (
@@ -134,31 +127,6 @@ export default function HomeScreen() {
                     </View>
                 </View>
 
-                <View style={styles.container}>
-                    <View style={[styles.scoreCard, { backgroundColor: theme.card }]}>
-                        <View style={styles.scoreHeader}>
-                            <Text style={[styles.scoreLabel, { color: theme.text }]}>Rendimiento Académico</Text>
-                            <Text style={[styles.scoreValue, { color: primaryColor }]}>{userData.academicScore}</Text>
-                        </View>
-                        <View style={styles.progressBarBg}>
-                            <View style={[styles.progressBarFill, { backgroundColor: primaryColor, width: `${(userData.academicScore / 10) * 100}%` }]} />
-                        </View>
-                    </View>
-                </View>
-
-                <View style={styles.container}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>Expediente Escolar</Text>
-                    <View style={[styles.fullCard, { backgroundColor: theme.card }]}>
-                        <DetailRow icon="id-card-outline" label="Matrícula" value={userData.idnumber} theme={theme} />
-                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
-                        <DetailRow icon="business-outline" label="Institución" value={userData.school} theme={theme} />
-                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
-                        <DetailRow icon="call-outline" label="Teléfono" value={userData.phone} theme={theme} />
-                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
-                        <DetailRow icon="location-outline" label="Ciudad" value={`${userData.city}, ${userData.country}`} theme={theme} />
-                    </View>
-                </View>
-
                 {userData.description && (
                     <View style={styles.container}>
                         <View style={[styles.bioCard, { backgroundColor: theme.card }]}>
@@ -193,6 +161,21 @@ export default function HomeScreen() {
                     />
                 </View>
 
+                <View style={styles.container}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>Expediente Escolar</Text>
+                    <View style={[styles.fullCard, { backgroundColor: theme.card }]}>
+                        <DetailRow icon="id-card-outline" label="Matrícula" value={userData.idnumber} theme={theme} />
+                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                        <DetailRow icon="stats-chart-outline" label="Calificación General" value={userData.academicScore} theme={theme} />
+                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                        <DetailRow icon="business-outline" label="Institución" value={userData.school} theme={theme} />
+                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                        <DetailRow icon="call-outline" label="Teléfono" value={userData.phone} theme={theme} />
+                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                        <DetailRow icon="location-outline" label="Ciudad" value={`${userData.city}, ${userData.country}`} theme={theme} />
+                    </View>
+                </View>
+
                 <View style={styles.footer}>
                     <Text style={[styles.footerText, { color: theme.text }]}>NH Global School</Text>
                     <Text style={styles.versionText}>Versión 2.0.26</Text>
@@ -213,7 +196,6 @@ const DetailRow = ({ icon, label, value, theme }) => (
 );
 
 const styles = StyleSheet.create({
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     upperHeader: { height: 80, alignItems: 'center', justifyContent: 'flex-end', zIndex: 1 },
     profileContainer: { width: 110, height: 110, borderRadius: 55, borderWidth: 5, overflow: 'hidden', marginBottom: -55, elevation: 8 },
     profileImg: { width: '100%', height: '100%' },
@@ -227,12 +209,6 @@ const styles = StyleSheet.create({
     combinedBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
     combinedBadgeText: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
     container: { paddingHorizontal: 20, marginTop: 25 },
-    scoreCard: { padding: 20, borderRadius: 25, elevation: 3 },
-    scoreHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-    scoreLabel: { fontSize: 15, fontWeight: '700', opacity: 0.8 },
-    scoreValue: { fontSize: 22, fontWeight: '900' },
-    progressBarBg: { height: 8, backgroundColor: '#E0E0E030', borderRadius: 4, overflow: 'hidden' },
-    progressBarFill: { height: '100%', borderRadius: 4 },
     bioCard: { padding: 20, borderRadius: 20, borderLeftWidth: 4, borderLeftColor: '#49B6CC' },
     bioText: { fontSize: 14, fontStyle: 'italic', lineHeight: 22, opacity: 0.7, textAlign: 'center' },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
