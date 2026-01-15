@@ -1,4 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
+import * as SecureStore from 'expo-secure-store';
 import { useCallback, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import {
@@ -57,6 +58,9 @@ export default function LoginScreen() {
         try {
             await LoginServices(username, password);
             
+            await SecureStore.setItemAsync("lastLoggedInUsername", username);
+            await SecureStore.setItemAsync("lastLoggedInPassword", password);
+
             Toast.show({
                 type: 'custom_success', 
                 text1: t('auth.success_title'),

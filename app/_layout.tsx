@@ -80,10 +80,24 @@ function AppWrapper() {
                 <Drawer.Screen name="auth/course" options={{ title: t('menu.courses') }} />
                 <Drawer.Screen name="auth/testScreen" options={{ title: t('menu.profile') }} />
                 <Drawer.Screen name="auth/portfolio" options={{ title: t('menu.cv') }} />
+                
                 <Drawer.Screen 
                     name="auth/courseDetail" 
-                    options={{ title: t('menu.courseDetail'), headerShown: false }} 
+                    options={{ 
+                        title: t('menu.courseDetail'), 
+                        headerShown: false 
+                    }} 
                 />
+
+                <Drawer.Screen 
+                    name="auth/workDetail" 
+                    options={{ 
+                        title: 'Detalle de Tarea', 
+                        headerShown: false,
+                        drawerItemStyle: { display: 'none' } 
+                    }} 
+                />
+
                 <Drawer.Screen 
                     name="auth/language" 
                     options={{ title: t('menu.language'), drawerItemStyle: { display: 'none' } }} 

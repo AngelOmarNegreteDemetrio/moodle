@@ -4,7 +4,6 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator, Alert, FlatList,
-    Linking,
     Platform,
     SafeAreaView,
     StatusBar,
@@ -68,10 +67,16 @@ export default function CourseDetailScreen() {
         }, [fetchActivities])
     );
     
-    const handleOpenActivity = (url) => {
+    const handleOpenActivity = (url, name) => {
         if (url) {
-            Linking.openURL(url).catch(err => {
-                Alert.alert(t('common.error'), t('course_detail.error_url'));
+            router.push({
+                pathname: '/auth/workDetail',
+                params: { 
+                    url: url, 
+                    title: name,
+                    courseId: courseId,
+                    courseName: courseName
+                }
             });
         }
     };
@@ -82,12 +87,13 @@ export default function CourseDetailScreen() {
                 styles.activityItem,
                 { backgroundColor: CARD_BACKGROUND_COLOR, borderLeftColor: ACTIVITY_ACCENT_COLOR }
             ]} 
-            onPress={() => handleOpenActivity(item.url)}
+            onPress={() => handleOpenActivity(item.url, item.name)}
         >
             <View style={styles.activityInfo}>
                 <Text style={[styles.activitySectionType, { color: PRIMARY_COLOR }]}>{item.type.toUpperCase()}</Text> 
                 <Text style={[styles.activityName, { color: ACCENT_TEXT_COLOR }]} numberOfLines={2}>{item.name}</Text>
             </View>
+            <Ionicons name="chevron-forward" size={20} color={ACTIVITY_ACCENT_COLOR} />
         </TouchableOpacity>
     );
 
@@ -142,10 +148,6 @@ export default function CourseDetailScreen() {
     );
 }
 
-CourseDetailScreen.options = {
-    headerShown: false,
-};
-
 const styles = StyleSheet.create({
     container: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -171,16 +173,13 @@ const styles = StyleSheet.create({
         padding: 15, 
         marginVertical: 8, 
         borderRadius: 10,
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
         elevation: 3,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         borderLeftWidth: 5,
     },
-    activityInfo: { flexShrink: 1, marginRight: 10 },
+    activityInfo: { flex: 1, marginRight: 10 },
     activityName: { fontSize: 16, fontWeight: '600' },
     activitySectionType: { 
         fontSize: 12, 

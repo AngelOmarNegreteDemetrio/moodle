@@ -102,10 +102,7 @@ export default function CourseScreen() {
                 ]}
                 onPress={() => handleCoursePress(item.id, item.fullname)}
             >
-                <View> 
-                    <Text style={[styles.courseTitle, { color: theme.text }]}>{item.fullname}</Text>
-                    <Text style={[styles.courseSubtitle, { color: secondaryTextColor }]}>ID Moodle: {item.id}</Text> 
-                </View>
+                <Text style={[styles.courseTitle, { color: theme.text }]}>{item.fullname}</Text>
             </TouchableOpacity>
         );
     };
@@ -260,10 +257,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         maxWidth: '100%', 
-    },
-    courseSubtitle: {
-        fontSize: 13,
-        marginTop: 4,
     },
     noResultsText: {
         padding: 15,
