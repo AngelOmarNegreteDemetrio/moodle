@@ -40,6 +40,20 @@ export default function CourseDetailScreen() {
 
     const [pendingActivities, setPendingActivities] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isNavigating, setIsNavigating] = useState(false);
+
+    const getActivityLabel = (type) => {
+        const lowerType = type.toLowerCase();
+        if (lowerType.includes('assign')) return t('activity_types.assign');
+        if (lowerType.includes('quiz')) return t('activity_types.quiz');
+        if (lowerType.includes('scorm')) return t('activity_types.scorm');
+        if (lowerType.includes('hvp') || lowerType.includes('h5p')) return t('activity_types.hvp');
+        if (lowerType.includes('page')) return t('activity_types.page');
+        if (lowerType.includes('resource')) return t('activity_types.resource');
+        if (lowerType.includes('url')) return t('activity_types.url');
+        if (lowerType.includes('forum')) return t('activity_types.forum');
+        return t('activity_types.default');
+    };
 
     const fetchActivities = useCallback(async () => {
         setIsLoading(true);
@@ -53,7 +67,10 @@ export default function CourseDetailScreen() {
 
         try {
             const activities = await GetCourseActivitiesService(id);
-            setPendingActivities(activities);
+            const filteredActivities = activities.filter(
+                activity => !activity.type.toLowerCase().includes('label')
+            );
+            setPendingActivities(filteredActivities);
         } catch (error) {
             Alert.alert(t('common.error'), error.message);
         } finally {
@@ -63,12 +80,14 @@ export default function CourseDetailScreen() {
 
     useFocusEffect(
         useCallback(() => {
+            setIsNavigating(false);
             fetchActivities();
         }, [fetchActivities])
     );
     
     const handleOpenActivity = (url, name) => {
-        if (url) {
+        if (url && !isNavigating) {
+            setIsNavigating(true);
             router.push({
                 pathname: '/auth/workDetail',
                 params: { 
@@ -81,6 +100,10 @@ export default function CourseDetailScreen() {
         }
     };
 
+    const handleBackToCourses = () => {
+        router.replace('/auth/course');
+    };
+
     const renderActivity = ({ item }) => (
         <TouchableOpacity 
             style={[
@@ -88,12 +111,21 @@ export default function CourseDetailScreen() {
                 { backgroundColor: CARD_BACKGROUND_COLOR, borderLeftColor: ACTIVITY_ACCENT_COLOR }
             ]} 
             onPress={() => handleOpenActivity(item.url, item.name)}
+            disabled={isNavigating}
         >
             <View style={styles.activityInfo}>
-                <Text style={[styles.activitySectionType, { color: PRIMARY_COLOR }]}>{item.type.toUpperCase()}</Text> 
-                <Text style={[styles.activityName, { color: ACCENT_TEXT_COLOR }]} numberOfLines={2}>{item.name}</Text>
+                <Text style={[styles.activitySectionType, { color: PRIMARY_COLOR }]}>
+                    {getActivityLabel(item.type)}
+                </Text> 
+                <Text style={[styles.activityName, { color: ACCENT_TEXT_COLOR }]} numberOfLines={2}>
+                    {item.name}
+                </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={ACTIVITY_ACCENT_COLOR} />
+            {isNavigating ? (
+                <ActivityIndicator size="small" color={ACTIVITY_ACCENT_COLOR} />
+            ) : (
+                <Ionicons name="chevron-forward" size={20} color={ACTIVITY_ACCENT_COLOR} />
+            )}
         </TouchableOpacity>
     );
 
@@ -110,7 +142,7 @@ export default function CourseDetailScreen() {
         <View style={[styles.container, { backgroundColor: BACKGROUND_COLOR }]}>
             <View style={[styles.header, { backgroundColor: PRIMARY_COLOR }]}>
                 <TouchableOpacity 
-                    onPress={() => router.replace('/auth/course')} 
+                    onPress={handleBackToCourses} 
                     style={styles.backButton}
                 >
                     <Ionicons name="arrow-back" size={24} color={LIGHT_TEXT_COLOR} />
@@ -130,7 +162,7 @@ export default function CourseDetailScreen() {
                     <Text style={[styles.emptyText, { color: ACCENT_TEXT_COLOR }]}>{t('course_detail.no_pending')}</Text>
                     <TouchableOpacity 
                         style={[styles.secondaryBackButton, { backgroundColor: PRIMARY_COLOR }]} 
-                        onPress={() => router.replace('/auth/course')}
+                        onPress={handleBackToCourses}
                     >
                          <Text style={styles.secondaryBackButtonText}>{t('course_detail.back_to_courses')}</Text>
                     </TouchableOpacity>
@@ -157,7 +189,7 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         flexDirection: 'row', 
         alignItems: 'center',
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 40,
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 60,
     },
     backButton: {
         marginRight: 15,

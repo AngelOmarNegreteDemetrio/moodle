@@ -74,6 +74,19 @@
     "error_id": "Invalid course ID",
     "error_url": "Could not open the activity link."
   },
+  "activity_types": {
+    "assign": "Assignment",
+    "quiz": "Quiz / Exam",
+    "resource": "Study Material",
+    "folder": "File Folder",
+    "url": "Web Link",
+    "scorm": "Interactive Lesson",
+    "hvp": "Dynamic Activity",
+    "page": "Reading",
+    "forum": "Discussion Forum",
+    "feedback": "Survey",
+    "default": "Activity"
+  },
   "auth": {
     "login_title": "Login",
     "username": "Username",

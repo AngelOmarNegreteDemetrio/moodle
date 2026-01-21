@@ -74,6 +74,19 @@
     "error_id": "ID de curso no válido",
     "error_url": "No se pudo abrir el enlace de la actividad."
   },
+  "activity_types": {
+    "assign": "Tarea",
+    "quiz": "Examen",
+    "resource": "Material de Apoyo",
+    "folder": "Carpeta de Archivos",
+    "url": "Enlace Web",
+    "scorm": "Lección Interactiva",
+    "hvp": "Actividad Dinámica",
+    "page": "Lectura",
+    "forum": "Foro de Discusión",
+    "feedback": "Encuesta",
+    "default": "Actividad"
+  },
   "auth": {
     "login_title": "Iniciar Sesión",
     "username": "Usuario",
