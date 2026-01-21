@@ -265,4 +265,5 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 8,
         marginBottom: 10,
     }
+    
 });
