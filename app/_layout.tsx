@@ -1,34 +1,63 @@
-// app/_layout.tsx
-
+import { useRouter, useSegments } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { StatusBar } from "expo-status-bar";
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Animated } from 'react-native';
 
+import '../language/i18n';
+
+import { AuthProvider, useAuth } from '../app/auth/authContext';
 import { ThemeProvider, useTheme } from '../app/context/themeContext';
 import MenuContent, { CustomHeader } from '../components/navigation/menu';
 
-
-// Componente Wrapper para acceder al tema
 function AppWrapper() {
     const { theme, isDark } = useTheme();
+    const { t, i18n } = useTranslation();
+    const { userToken, isLoading } = useAuth();
+    const segments = useSegments();
+    const router = useRouter();
+
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        Animated.sequence([
+            Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [i18n.language]);
+
+    useEffect(() => {
+        if (isLoading) return;
+        const inAuthGroup = segments[0] === 'auth';
+        if (!userToken && !inAuthGroup) {
+            router.replace('/auth/Login');
+        } else if (userToken && inAuthGroup && segments[1] === 'Login') {
+            router.replace('/');
+        }
+    }, [userToken, isLoading, segments]);
 
     return (
-        <>
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
             <StatusBar style={isDark ? "light" : "dark"} /> 
             
             <Drawer
-                drawerContent={MenuContent}
-                
+                drawerContent={(props) => <MenuContent {...props} />}
                 screenOptions={({ navigation }) => ({
-                    
                     headerShown: true, 
-                    
                     header: () => (
                         <CustomHeader 
                             onMenuPress={() => navigation.toggleDrawer()} 
                         />
                     ),
-                    
                     drawerType: 'slide', 
                     drawerStyle: { 
                         width: '75%',
@@ -39,54 +68,51 @@ function AppWrapper() {
                     }
                 })}
             >
-                {/* RUTA DE LOGIN: Cabecera OCULTA y se omite del menú Drawer */}
                 <Drawer.Screen 
                     name="auth/Login" 
                     options={{ 
-                        headerShown: false, // Oculta la barra de navegación en Login
-                        title: 'Iniciar Sesión',
-                        drawerItemStyle: { display: 'none' } // Oculta el enlace del Drawer
+                        headerShown: false, 
+                        title: t('menu.login'),
+                        drawerItemStyle: { display: 'none' } 
                     }} 
                 />
+                <Drawer.Screen name="index" options={{ title: 'College' }} />
+                <Drawer.Screen name="auth/course" options={{ title: t('menu.courses') }} />
+                <Drawer.Screen name="auth/testScreen" options={{ title: t('menu.profile') }} />
+                <Drawer.Screen name="auth/portfolio" options={{ title: t('menu.cv') }} />
                 
-                {/* Otras rutas */}
-                <Drawer.Screen 
-                    name="index" 
-                    options={{ 
-                        title: 'College', 
-                    }} 
-                />
-                <Drawer.Screen 
-                    name="auth/course" 
-                    options={{ 
-                        title: 'Mis Cursos', 
-                    }} 
-                />
-                <Drawer.Screen 
-                    name="auth/testScreen" 
-                    options={{ 
-                        title: 'Mi Rol', 
-                    }} 
-                />
                 <Drawer.Screen 
                     name="auth/courseDetail" 
                     options={{ 
-                        title: 'Detalle del Curso', 
-                        headerShown: false, // Cabecera oculta para esta ruta también
+                        title: t('menu.courseDetail'), 
+                        headerShown: false 
                     }} 
                 />
-                
+
+                <Drawer.Screen 
+                    name="auth/workDetail" 
+                    options={{ 
+                        title: 'Detalle de Tarea', 
+                        headerShown: false,
+                        drawerItemStyle: { display: 'none' } 
+                    }} 
+                />
+
+                <Drawer.Screen 
+                    name="auth/language" 
+                    options={{ title: t('menu.language'), drawerItemStyle: { display: 'none' } }} 
+                />
             </Drawer>
-        </>
+        </Animated.View>
     );
 }
 
-
-// El Layout principal ENGLOBA toda la aplicación con el ThemeProvider
 export default function MainLayout() {
     return (
-        <ThemeProvider>
-            <AppWrapper />
-        </ThemeProvider>
+        <AuthProvider>
+            <ThemeProvider>
+                <AppWrapper />
+            </ThemeProvider>
+        </AuthProvider>
     );
 }

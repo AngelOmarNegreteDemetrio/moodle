@@ -1,21 +1,14 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import * as SecureStore from 'expo-secure-store';
 import { API_URL } from "../../constants/url";
 
-// ------------------------------------------------------------------
-// FUNCIÓN DE CIERRE DE SESIÓN
-// ------------------------------------------------------------------
 export async function logoutUser() {
-    await AsyncStorage.removeItem("moodleToken");
-    await AsyncStorage.removeItem("moodleUserId");
-    await AsyncStorage.removeItem("lastLoggedInUsername");
+    await SecureStore.deleteItemAsync("moodleToken");
+    await SecureStore.deleteItemAsync("moodleUserId");
+    await SecureStore.deleteItemAsync("lastLoggedInUsername");
+    await SecureStore.deleteItemAsync("lastLoggedInPassword");
 }
-// ------------------------------------------------------------------
 
-
-// ------------------------------------------------------------------
-// FUNCIÓN AUXILIAR: Para obtener el ID del usuario
-// ------------------------------------------------------------------
 async function getUserData(token, username) {
     const functionName = "core_user_get_users_by_field";
 
@@ -37,12 +30,9 @@ async function getUserData(token, username) {
         throw new Error("No se pudo obtener el ID de usuario después de la autenticación.");
     }
 }
-// ------------------------------------------------------------------
-
 
 export async function LoginServices(username, password) {
     try {
-        // 1. OBTENER TOKEN
         const tokenResponse = await axios.post(
             `${API_URL}/login/token.php`,
             new URLSearchParams({
@@ -65,16 +55,13 @@ export async function LoginServices(username, password) {
         }
 
         const token = tokenData.token;
-
-        // 2. OBTENER ID DEL USUARIO
         const userDetails = await getUserData(token, username);
 
-        // 3. GUARDAR LA NUEVA SESIÓN
-        await AsyncStorage.setItem("moodleToken", token);
-        await AsyncStorage.setItem("lastLoggedInUsername", username);
-        await AsyncStorage.setItem("moodleUserId", userDetails.id.toString());
+        await SecureStore.setItemAsync("moodleToken", token);
+        await SecureStore.setItemAsync("lastLoggedInUsername", username);
+        await SecureStore.setItemAsync("lastLoggedInPassword", password);
+        await SecureStore.setItemAsync("moodleUserId", userDetails.id.toString());
 
-        // Retornamos los datos
         return {
             token: token,
             userid: userDetails.id,
@@ -83,9 +70,6 @@ export async function LoginServices(username, password) {
         };
 
     } catch (error) {
-        // 🚨 Eliminada la línea console.error() aquí.
-        // Solo relanzamos el error para que sea capturado en la pantalla de Login.
-        
         if (error.response) {
             throw new Error(`Error del servidor: ${error.response.status}. Por favor, verifica tu URL o credenciales.`);
         } else if (error.request) {

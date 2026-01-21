@@ -1,0 +1,89 @@
+{
+  "common": {
+    "error": "Error",
+    "loading": "Loading...",
+    "accept": "Accept",
+    "cancel": "Cancel",
+    "back": "Back",
+    "success": "Success!"
+  },
+  "perfil": {
+    "mis_medallas": "My Badges",
+    "sin_medallas": "No badges yet.",
+    "detalles_expediente": "File Details",
+    "matricula": "Student ID",
+    "nivel": "Level",
+    "correo": "Email",
+    "ciudad": "City",
+    "no_asignada": "Not assigned",
+    "general": "General",
+    "colegio": "Nuevo Horizontes Global School"
+  },
+  "settings": {
+    "language_title": "Select Language",
+    "language_subtitle": "Choose your preferred language for the application."
+  },
+  "cv": {
+    "profile_title": "PROFESSIONAL ACADEMIC PROFILE",
+    "no_phone": "Not registered",
+    "summary_title": "Executive Summary",
+    "formation_title": "Education & Competencies",
+    "moodle_certified": "INSTITUTIONAL COURSE • MOODLE CERTIFIED",
+    "sync_error": "Could not sync profile.",
+    "mastery": "Mastery in",
+    "training": "In training",
+    "course_description": "Development of analytical and technical competencies applied to {{name}}, with a practical focus on problem solving and project implementation."
+  },
+  "menu": {
+    "home": "Home",
+    "courses": "My Courses",
+    "cv": "CV Generator",
+    "profile": "My Role",
+    "language": "Select Language",
+    "logout": "Log Out",
+    "settings_title": "Settings & Appearance",
+    "dark_mode": "Dark Mode"
+  },
+  "courses": {
+    "title": "My Courses",
+    "no_courses": "You have no enrolled courses.",
+    "progress": "Progress",
+    "completed": "Completed"
+  },
+  "calendar": {
+    "title": "Moodle Calendar",
+    "sync_button": "Sync to Phone",
+    "no_events": "No upcoming events.",
+    "sync_success": "Events synced with your phone calendar.",
+    "sync_error": "Could not sync calendar.",
+    "permission_denied": "Calendar access is required to sync.",
+    "modal_title": "Sync Calendar?",
+    "modal_description": "Your Moodle due dates will be added to your phone's agenda.",
+    "sync_now": "Sync now"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No new notifications in Moodle.",
+    "default_title": "Moodle Notification"
+  },
+  "course_detail": {
+    "pending_activities": "Pending Activities",
+    "congratulations": "Congratulations! 🎉",
+    "no_pending": "You have no pending activities in this course.",
+    "back_to_courses": "Back to Courses",
+    "error_id": "Invalid course ID",
+    "error_url": "Could not open the activity link."
+  },
+  "auth": {
+    "login_title": "Login",
+    "username": "Username",
+    "password": "Password",
+    "login_button": "Login",
+    "forgot_password": "Forgot my password",
+    "error_empty": "Please enter your username and password.",
+    "error_failed": "Login Failed",
+    "error_invalid": "Incorrect username or password.",
+    "success_title": "Access Successful!",
+    "success_message": "Welcome."
+  }
+}
