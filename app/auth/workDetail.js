@@ -18,7 +18,7 @@ export default function WorkDetailScreen() {
     const { url, courseId, courseName } = useLocalSearchParams();
     const { isDark } = useTheme();
     const [credentials, setCredentials] = useState({ user: '', pass: '' });
-    const [loading, setLoading] = useState(true);
+    const [isVisible, setIsVisible] = useState(false);
     const webViewRef = useRef(null);
 
     const PRIMARY_COLOR = isDark ? '#F55D69' : '#FF0000';
@@ -30,7 +30,7 @@ export default function WorkDetailScreen() {
                 const pass = await SecureStore.getItemAsync("lastLoggedInPassword");
                 if (user && pass) setCredentials({ user, pass });
             } catch (error) {
-                console.error("Error al obtener credenciales:", error);
+                console.error(error);
             }
         };
         getCreds();
@@ -52,6 +52,7 @@ export default function WorkDetailScreen() {
     `;
 
     const handleBack = () => {
+        setIsVisible(false);
         if (courseId) {
             router.replace({
                 pathname: "/auth/courseDetail",
@@ -77,17 +78,16 @@ export default function WorkDetailScreen() {
                     ref={webViewRef}
                     key={url}
                     source={{ uri: url }} 
-                    onLoadStart={() => setLoading(true)}
                     onLoadEnd={() => {
-                        setLoading(false);
+                        webViewRef.current.injectJavaScript(loginJS);
+                        setIsVisible(true);
                     }}
-                    injectedJavaScript={loginJS}
-                    startInLoadingState={true}
                     domStorageEnabled={true}
                     javaScriptEnabled={true}
+                    allowFileAccess={true}
+                    playsInline={true}
                     allowsFullscreenVideo={true}
-                    mixedContentMode="always"
-                    style={{ flex: 1 }}
+                    startInLoadingState={true}
                     renderLoading={() => (
                         <View style={styles.loader}>
                             <ActivityIndicator size="large" color={PRIMARY_COLOR} />
@@ -108,9 +108,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         paddingBottom: 15,
     },
-    backButton: { 
-        padding: 5 
-    },
+    backButton: { padding: 5 },
     webViewContainer: {
         flex: 1,
         backgroundColor: 'white',
