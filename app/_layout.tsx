@@ -76,11 +76,30 @@ function AppWrapper() {
                         drawerItemStyle: { display: 'none' } 
                     }} 
                 />
+                
                 <Drawer.Screen name="index" options={{ title: 'College' }} />
                 <Drawer.Screen name="auth/course" options={{ title: t('menu.courses') }} />
                 <Drawer.Screen name="auth/testScreen" options={{ title: t('menu.profile') }} />
                 <Drawer.Screen name="auth/portfolio" options={{ title: t('menu.cv') }} />
-                
+
+                <Drawer.Screen 
+                    name="auth/messages" 
+                    options={{ 
+                        title: 'Mensajes',
+                        headerShown: false,
+                        drawerItemStyle: { display: 'none' }
+                    }} 
+                />
+
+                <Drawer.Screen 
+                    name="auth/notifications" 
+                    options={{ 
+                        title: 'Notificaciones',
+                        headerShown: false,
+                        drawerItemStyle: { display: 'none' }
+                    }} 
+                />
+
                 <Drawer.Screen 
                     name="auth/courseDetail" 
                     options={{ 

@@ -1,5 +1,6 @@
 import Entypo from '@expo/vector-icons/Entypo';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
@@ -32,12 +33,44 @@ const COLLEGE_COLORS = {
 export function CustomHeader({ onMenuPress }) { 
     const { isDark } = useTheme(); 
     const navigation = useNavigation();
+    const router = useRouter();
+    const [unreadMessages, setUnreadMessages] = useState(0);
     
     const headerColor = isDark 
         ? COLLEGE_COLORS.COLOR_OSCURO_COINCIDENTE 
         : COLLEGE_COLORS.COLOR_CLARO_COINCIDENTE; 
     
     const iconColor = COLLEGE_COLORS.WHITE; 
+
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                const token = await AsyncStorage.getItem('moodleToken');
+                const userId = await AsyncStorage.getItem('moodleUserId');
+                const baseUrl = ""; // COLOCA AQUÍ TU URL (ej: https://moodle.tucolegio.com)
+
+                if (token && userId && baseUrl !== "") {
+                    const response = await fetch(
+                        `${baseUrl}/webservice/rest/server.php?wstoken=${token}&wsfunction=core_message_get_unread_conversations_count&moodlewsrestformat=json&useridto=${userId}`,
+                        { method: 'GET' }
+                    );
+                    
+                    if (!response.ok) throw new Error("Server error");
+                    
+                    const data = await response.json();
+                    if (data && typeof data.count !== 'undefined') {
+                        setUnreadMessages(data.count);
+                    }
+                }
+            } catch (error) {
+                console.warn("No se pudo conectar con el servidor de mensajes:", error.message);
+            }
+        };
+
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <View style={{ zIndex: 100 }}>
@@ -60,12 +93,33 @@ export function CustomHeader({ onMenuPress }) {
 
                 <Text style={headerStyles.headerTitle}>College</Text>
 
-                <TouchableOpacity style={headerStyles.notificationButton} onPress={() => navigation.navigate('auth/notifications')}>
-                    <View>
-                        <FontAwesome name="bell" size={24} color={iconColor} />
-                        <View style={headerStyles.badge} />
-                    </View>
-                </TouchableOpacity>
+                <View style={headerStyles.rightIconsContainer}>
+                    <TouchableOpacity 
+                        style={headerStyles.iconButton} 
+                        onPress={() => navigation.navigate('auth/notifications')}
+                    >
+                        <View>
+                            <FontAwesome name="bell" size={24} color={iconColor} />
+                            <View style={headerStyles.notificationBadge} />
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        style={headerStyles.iconButton} 
+                        onPress={() => router.push('/auth/messages')}
+                    >
+                        <View>
+                            <MaterialIcons name="chat" size={26} color={iconColor} />
+                            {unreadMessages > 0 && (
+                                <View style={headerStyles.messageBadge}>
+                                    <Text style={headerStyles.badgeText}>
+                                        {unreadMessages > 9 ? '+9' : unreadMessages}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
     );
@@ -212,8 +266,15 @@ const headerStyles = StyleSheet.create({
     },
     headerTitle: { fontSize: 24, fontWeight: '800', color: COLLEGE_COLORS.WHITE },
     menuButton: { padding: 5 },
-    notificationButton: { padding: 5 },
-    badge: {
+    rightIconsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iconButton: {
+        padding: 5,
+        marginLeft: 12,
+    },
+    notificationBadge: {
         position: 'absolute',
         right: -2,
         top: -2,
@@ -223,6 +284,23 @@ const headerStyles = StyleSheet.create({
         borderRadius: 5,
         borderWidth: 1,
         borderColor: '#FF0000',
+    },
+    messageBadge: {
+        position: 'absolute',
+        right: -6,
+        bottom: -4,
+        backgroundColor: '#FFFFFF',
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 2,
+    },
+    badgeText: {
+        color: '#FF0000',
+        fontSize: 10,
+        fontWeight: '900',
     }
 });
 

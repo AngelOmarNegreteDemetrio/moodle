@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Calendar from 'expo-calendar';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,6 +9,9 @@ import {
     Alert,
     FlatList,
     Modal,
+    Platform,
+    SafeAreaView,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -19,11 +22,14 @@ import { GetMoodleCalendarEvents, GetMoodleNotifications } from "../../services/
 import { useTheme } from '../context/themeContext';
 
 export default function NotificationsScreen() {
-    const { theme } = useTheme();
+    const { theme, isDark } = useTheme();
     const { t } = useTranslation();
+    const router = useRouter();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
+
+    const PRIMARY_COLOR = isDark ? '#F55D69' : '#FF0000';
 
     const loadRealNotifications = async () => {
         setLoading(true);
@@ -91,63 +97,47 @@ export default function NotificationsScreen() {
 
     if (loading) {
         return (
-            <View style={[styles.container, { justifyContent: 'center', backgroundColor: theme.background }]}>
-                <ActivityIndicator size="large" color={theme.primary} />
+            <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={PRIMARY_COLOR} />
             </View>
         );
     }
 
     return (
         <View style={{ flex: 1, backgroundColor: theme.background }}>
-            <View style={styles.container}>
-                <View style={styles.header}>
-                    <Text style={[styles.title, { color: theme.text }]}>
-                        {t('notifications.title')}
-                    </Text>
-                    <TouchableOpacity onPress={() => setModalVisible(true)}>
-                        <Ionicons name="calendar-outline" size={28} color={theme.primary} />
-                    </TouchableOpacity>
-                </View>
+            <StatusBar barStyle="light-content" backgroundColor={PRIMARY_COLOR} translucent={false} />
+            
+            <View style={[styles.headerWrapper, { backgroundColor: PRIMARY_COLOR }]}>
+                <SafeAreaView>
+                    <View style={styles.headerContent}>
+                        <TouchableOpacity onPress={() => router.back()} style={styles.sideButton}>
+                            <Ionicons name="arrow-back" size={28} color="white" />
+                        </TouchableOpacity>
 
-                <Modal
-                    animationType="fade"
-                    transparent={true}
-                    visible={modalVisible}
-                    onRequestClose={() => setModalVisible(false)}
-                >
-                    <View style={styles.modalOverlay}>
-                        <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-                            <Ionicons name="cloud-download-outline" size={50} color={theme.primary} />
-                            <Text style={[styles.modalTitle, { color: theme.text }]}>
-                                {t('calendar.modal_title')}
-                            </Text>
-                            <Text style={[styles.modalText, { color: theme.textSecondary }]}>
-                                {t('calendar.modal_description')}
-                            </Text>
-                            
-                            <TouchableOpacity 
-                                style={[styles.btnAction, { backgroundColor: theme.primary }]}
-                                onPress={handleSyncCalendar}
-                            >
-                                <Text style={styles.btnText}>{t('calendar.sync_now')}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <Text style={{ color: '#FF4444', marginTop: 15, fontWeight: 'bold' }}>
-                                    {t('common.cancel')}
-                                </Text>
-                            </TouchableOpacity>
+                        <View style={styles.titleContainer}>
+                            <Text style={styles.headerTitle}>Notificaciones</Text>
                         </View>
-                    </View>
-                </Modal>
 
+                        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.sideButton}>
+                            <Ionicons name="calendar-outline" size={28} color="white" />
+                        </TouchableOpacity>
+                    </View>
+                </SafeAreaView>
+            </View>
+
+            <View style={styles.container}>
                 <FlatList
                     data={notifications}
                     keyExtractor={item => item.id}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}
                     ListEmptyComponent={
-                        <Text style={{ color: theme.text, textAlign: 'center', marginTop: 20 }}>
-                            {t('notifications.empty')}
-                        </Text>
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="notifications-off-outline" size={80} color={isDark ? '#444' : '#CCC'} />
+                            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                                No hay notificaciones nuevas.
+                            </Text>
+                        </View>
                     }
                     renderItem={({ item }) => (
                         <TouchableOpacity 
@@ -166,20 +156,110 @@ export default function NotificationsScreen() {
                     )}
                 />
             </View>
+
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+                        <Ionicons name="cloud-download-outline" size={50} color={PRIMARY_COLOR} />
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>
+                            {t('calendar.modal_title')}
+                        </Text>
+                        <Text style={[styles.modalText, { color: theme.textSecondary }]}>
+                            {t('calendar.modal_description')}
+                        </Text>
+                        
+                        <TouchableOpacity 
+                            style={[styles.btnAction, { backgroundColor: PRIMARY_COLOR }]}
+                            onPress={handleSyncCalendar}
+                        >
+                            <Text style={styles.btnText}>{t('calendar.sync_now')}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setModalVisible(false)}>
+                            <Text style={{ color: '#FF4444', marginTop: 15, fontWeight: 'bold' }}>
+                                {t('common.cancel')}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 20, flex: 1 },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    title: { fontSize: 22, fontWeight: 'bold' },
-    card: { 
-        padding: 15, borderRadius: 8, marginBottom: 12, borderLeftWidth: 5, 
-        elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2, shadowRadius: 1.41,
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    headerWrapper: {
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
     },
-    cardTitle: { fontWeight: 'bold', marginBottom: 4 },
+    headerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 60,
+        paddingHorizontal: 10,
+        justifyContent: 'space-between',
+    },
+    titleContainer: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: -1
+    },
+    headerTitle: {
+        color: 'white',
+        fontSize: 20,
+        fontWeight: 'bold',
+        textAlign: 'center'
+    },
+    sideButton: { 
+        width: 45,
+        height: 45,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    container: { 
+        flex: 1 
+    },
+    card: { 
+        padding: 15, 
+        borderRadius: 12, 
+        marginHorizontal: 20,
+        marginBottom: 12, 
+        borderLeftWidth: 5, 
+        elevation: 2, 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1, 
+        shadowRadius: 2,
+    },
+    cardTitle: { 
+        fontWeight: 'bold', 
+        marginBottom: 4, 
+        fontSize: 16 
+    },
+    emptyContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 120
+    },
+    emptyText: {
+        marginTop: 15,
+        fontSize: 16,
+        textAlign: 'center'
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',
@@ -191,13 +271,11 @@ const styles = StyleSheet.create({
         padding: 30,
         borderRadius: 20,
         alignItems: 'center',
-        elevation: 10
     },
     modalTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 15 },
     modalText: { textAlign: 'center', marginVertical: 15, fontSize: 14 },
     btnAction: {
         paddingVertical: 12,
-        paddingHorizontal: 25,
         borderRadius: 10,
         width: '100%',
         alignItems: 'center'
