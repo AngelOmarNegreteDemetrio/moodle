@@ -39,25 +39,28 @@ function AppWrapper() {
         if (isLoading) return;
 
         const inAuthGroup = segments[0] === 'auth';
+        const isLoginPage = segments[1] === 'Login';
 
         if (!userToken) {
-            if (segments[0] !== 'auth' || segments[1] !== 'Login') {
+            if (!inAuthGroup || !isLoginPage) {
                 router.replace('/auth/Login');
             }
-        } else if (userToken && inAuthGroup && segments[1] === 'Login') {
-            router.replace('/');
+        } else {
+            if (inAuthGroup && isLoginPage) {
+                router.replace('/');
+            }
         }
-    }, [userToken, isLoading]);
+    }, [userToken, isLoading, segments]);
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#000' }}>
+        <View style={{ flex: 1, backgroundColor: theme.background }}>
             <StatusBar style={isDark ? "light" : "dark"} />
             
             <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
                 <Drawer
                     drawerContent={(props) => <MenuContent {...props} />}
                     screenOptions={({ navigation }) => ({
-                        headerShown: true, 
+                        headerShown: !!userToken, 
                         header: () => (
                             <CustomHeader onMenuPress={() => navigation.toggleDrawer()} />
                         ),
@@ -68,7 +71,8 @@ function AppWrapper() {
                         },
                         sceneContainerStyle: {
                             backgroundColor: theme.background,
-                        }
+                        },
+                        swipeEnabled: !!userToken
                     })}
                 >
                     <Drawer.Screen 
@@ -80,20 +84,45 @@ function AppWrapper() {
                         }} 
                     />
                     
-                    <Drawer.Screen name="index" options={{ title: 'College' }} />
-                    <Drawer.Screen name="auth/course" options={{ title: t('menu.courses') }} />
-                    <Drawer.Screen name="auth/testScreen" options={{ title: t('menu.profile') }} />
-                    <Drawer.Screen name="auth/portfolio" options={{ title: t('menu.cv') }} />
-                    <Drawer.Screen name="auth/messages" options={{ title: 'Mensajes', headerShown: false, drawerItemStyle: { display: 'none' } }} />
-                    <Drawer.Screen name="auth/notifications" options={{ title: 'Notificaciones', headerShown: false, drawerItemStyle: { display: 'none' } }} />
+                    <Drawer.Screen 
+                        name="index" 
+                        options={{ 
+                            title: 'College',
+                            drawerItemStyle: userToken ? {} : { display: 'none' }
+                        }} 
+                    />
+                    <Drawer.Screen 
+                        name="auth/course" 
+                        options={{ 
+                            title: t('menu.courses'),
+                            drawerItemStyle: userToken ? {} : { display: 'none' }
+                        }} 
+                    />
+                    <Drawer.Screen 
+                        name="auth/testScreen" 
+                        options={{ 
+                            title: t('menu.profile'),
+                            drawerItemStyle: userToken ? {} : { display: 'none' }
+                        }} 
+                    />
+                    <Drawer.Screen 
+                        name="auth/portfolio" 
+                        options={{ 
+                            title: t('menu.cv'),
+                            drawerItemStyle: userToken ? {} : { display: 'none' }
+                        }} 
+                    />
+                    
+                    <Drawer.Screen name="auth/messages" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
+                    <Drawer.Screen name="auth/notifications" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
                     <Drawer.Screen name="auth/courseDetail" options={{ title: t('menu.courseDetail'), headerShown: false }} />
-                    <Drawer.Screen name="auth/workDetail" options={{ title: 'Detalle de Tarea', headerShown: false, drawerItemStyle: { display: 'none' } }} />
+                    <Drawer.Screen name="auth/workDetail" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
                     <Drawer.Screen name="auth/chatDetail" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
                     <Drawer.Screen name="auth/language" options={{ title: t('menu.language'), drawerItemStyle: { display: 'none' } }} />
                 </Drawer>
             </Animated.View>
 
-            {(isLoading || (!userToken && segments[0] !== 'auth')) && (
+            {isLoading && (
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center', zIndex: 999 }]}>
                     <ActivityIndicator size="large" color="#ffffff" />
                 </View>

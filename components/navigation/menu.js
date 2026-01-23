@@ -18,6 +18,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useAuth } from '../../app/auth/authContext';
 import { useTheme } from '../../app/context/themeContext';
 
 const HEADER_HEIGHT = 70;
@@ -47,7 +48,7 @@ export function CustomHeader({ onMenuPress }) {
             try {
                 const token = await AsyncStorage.getItem('moodleToken');
                 const userId = await AsyncStorage.getItem('moodleUserId');
-                const baseUrl = ""; // COLOCA AQUÍ TU URL (ej: https://moodle.tucolegio.com)
+                const baseUrl = "";
 
                 if (token && userId && baseUrl !== "") {
                     const response = await fetch(
@@ -128,8 +129,8 @@ export function CustomHeader({ onMenuPress }) {
 export default function MenuContent(props) {
     const { t, i18n } = useTranslation();
     const { navigation } = props;
-    const router = useRouter(); 
     const { theme, isDark, toggleTheme } = useTheme();
+    const { logout } = useAuth();
 
     const [currentLang, setCurrentLang] = useState(i18n.language);
     useEffect(() => {
@@ -152,12 +153,9 @@ export default function MenuContent(props) {
         return focusedRoute === routeName;
     };
     
-    const handleGoToLogin = async () => {
+    const handleLogout = async () => {
         if (navigation) navigation.closeDrawer(); 
-        await AsyncStorage.removeItem("moodleToken");
-        await AsyncStorage.removeItem("lastLoggedInUsername");
-        await AsyncStorage.removeItem("moodleUserId");
-        router.replace('/auth/Login'); 
+        await logout();
     };
 
     const inactiveIconColor = theme.text;
@@ -241,7 +239,7 @@ export default function MenuContent(props) {
 
                 <View style={[styles.menuSeparator, { backgroundColor: separatorColor, marginBottom: 15 }]} />
 
-                <TouchableOpacity style={styles.menuItem} onPress={handleGoToLogin}>
+                <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
                     <Text style={[styles.menuItemText, { color: COLLEGE_COLORS.LOGOUT_RED }]}>
                         {t('menu.logout')}
                     </Text>

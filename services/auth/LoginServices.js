@@ -1,10 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from "axios";
 import { API_URL } from "../../constants/url";
-
-export async function logoutUser() {
-    await AsyncStorage.clear();
-}
 
 async function getUserData(token, username) {
     const functionName = "core_user_get_users_by_field";
@@ -30,9 +25,6 @@ async function getUserData(token, username) {
 
 export async function LoginServices(username, password) {
     try {
-        // Limpieza total antes de empezar para evitar mezcla de datos
-        await AsyncStorage.clear();
-
         const tokenResponse = await axios.post(
             `${API_URL}/login/token.php`,
             new URLSearchParams({
@@ -53,11 +45,6 @@ export async function LoginServices(username, password) {
 
         const token = tokenData.token;
         const userDetails = await getUserData(token, username);
-
-        // Guardamos todo en AsyncStorage
-        await AsyncStorage.setItem("moodleToken", token);
-        await AsyncStorage.setItem("lastLoggedInUsername", username);
-        await AsyncStorage.setItem("moodleUserId", userDetails.id.toString());
 
         return {
             token: token,

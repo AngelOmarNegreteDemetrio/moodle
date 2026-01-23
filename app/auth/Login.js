@@ -1,5 +1,5 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
-import * as SecureStore from 'expo-secure-store';
 import { useCallback, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import Toast from 'react-native-toast-message';
 import { LoginServices } from "../../services/auth/LoginServices";
+import { useAuth } from '../auth/authContext';
 import { useTheme } from '../context/themeContext';
 
 const LogoSource = { uri: 'https://soluciones-hericraft.com/iniciar-sesion/pictures/college-logo.png' }; 
@@ -30,6 +31,7 @@ export default function LoginScreen() {
     const router = useRouter();
 
     const { theme, isDark } = useTheme();
+    const { login } = useAuth();
 
     const FORM_BACKGROUND = isDark ? theme.background : 'rgba(255, 255, 255, 0.9)';
     const TEXT_COLOR = theme.text;
@@ -56,26 +58,25 @@ export default function LoginScreen() {
         setLoading(true);
 
         try {
-            await LoginServices(username, password);
+            const response = await LoginServices(username, password);
             
-            await SecureStore.setItemAsync("lastLoggedInUsername", username);
-            await SecureStore.setItemAsync("lastLoggedInPassword", password);
+            if (response.success) {
+                await AsyncStorage.setItem('lastLoggedInUsername', username);
 
-            Toast.show({
-                type: 'custom_success', 
-                text1: t('auth.success_title'),
-                text2: t('auth.success_message'),
-                visibilityTime: 2000, 
-                position: 'top',
-                props: { 
-                    isDark: isDark,
-                    theme: theme
-                },
-            });
-            
-            setTimeout(() => {
-                router.replace("/"); 
-            }, 500); 
+                Toast.show({
+                    type: 'custom_success', 
+                    text1: t('auth.success_title'),
+                    text2: t('auth.success_message'),
+                    visibilityTime: 2000, 
+                    position: 'top',
+                    props: { 
+                        isDark: isDark,
+                        theme: theme
+                    },
+                });
+
+                await login(response.token, response.userid);
+            }
 
         } catch (error) {
             let errorMessage = t('auth.error_invalid');

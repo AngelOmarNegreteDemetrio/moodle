@@ -5,7 +5,7 @@ const AuthContext = createContext({
     userToken: null,
     userId: null,
     isLoading: true,
-    login: () => {},
+    login: (token, id) => {},
     logout: () => {}
 });
 
@@ -15,21 +15,19 @@ export const AuthProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        loadStorageData();
+        const clearOnStart = async () => {
+            try {
+                await AsyncStorage.multiRemove(['moodleToken', 'moodleUserId']);
+                setUserToken(null);
+                setUserId(null);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        clearOnStart();
     }, []);
-
-    const loadStorageData = async () => {
-        try {
-            const token = await AsyncStorage.getItem('moodleToken');
-            const id = await AsyncStorage.getItem('moodleUserId');
-            if (token) setUserToken(token);
-            if (id) setUserId(id);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const login = async (token, id) => {
         setUserToken(token);
@@ -41,7 +39,7 @@ export const AuthProvider = ({ children }) => {
     const logout = async () => {
         setUserToken(null);
         setUserId(null);
-        await AsyncStorage.clear(); 
+        await AsyncStorage.clear();
     };
 
     return (
@@ -52,5 +50,5 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
-
 export default AuthProvider;
+

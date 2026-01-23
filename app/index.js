@@ -4,6 +4,8 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    ActivityIndicator // Añadimos esto para el feedback visual
+    ,
     Dimensions,
     FlatList,
     Image,
@@ -13,6 +15,7 @@ import {
     Text,
     View
 } from 'react-native';
+import { useAuth } from '../app/auth/authContext';
 import { useTheme } from '../app/context/themeContext';
 import Header from '../components/navigation/menu';
 import { GetUserBadges } from "../services/auth/tasks";
@@ -23,8 +26,10 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen() {
     const { t, i18n } = useTranslation(); 
     const { theme, isDark } = useTheme(); 
+    const { userToken, userId } = useAuth(); // Usamos esto directamente
     const [userData, setUserData] = useState(null);
     const [badges, setBadges] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const primaryColor = isDark ? '#F55D69' : '#FF0000'; 
     const dynamicHeaderColor = isDark ? '#1A1A1A' : '#F2F2F2';
@@ -32,16 +37,24 @@ export default function HomeScreen() {
     useFocusEffect(
         useCallback(() => {
             let isActive = true;
+
             const fetchAllData = async () => {
                 try {
-                    const token = await AsyncStorage.getItem("moodleToken");
-                    const userId = await AsyncStorage.getItem("moodleUserId");
+                    setLoading(true);
+                    
+                    // Priorizamos el token del contexto, si no está, buscamos en storage
+                    const token = userToken || await AsyncStorage.getItem("moodleToken");
+                    const id = userId || await AsyncStorage.getItem("moodleUserId");
                     const username = await AsyncStorage.getItem("lastLoggedInUsername");
 
-                    if (!token || !username) return;
+                    // Si después de intentar ambos no hay nada, no podemos cargar
+                    if (!token || !username) {
+                        setLoading(false);
+                        return;
+                    }
 
                     const data = await GetUserInfoService(username, 'username');
-                    const badgesData = await GetUserBadges(token, userId);
+                    const badgesData = await GetUserBadges(token, id);
 
                     if (isActive && data) {
                         const nivel = (data.department || "").trim().toUpperCase();
@@ -77,16 +90,36 @@ export default function HomeScreen() {
                     }
                 } catch (error) {
                     console.error("Error Home:", error);
+                } finally {
+                    if (isActive) setLoading(false);
                 }
             };
 
             fetchAllData();
-            return () => { isActive = false; };
-        }, [i18n.language])
+            return () => { 
+                isActive = false; 
+            };
+        }, [i18n.language, userToken, userId]) // Reacciona cuando el token cambie
     );
 
+    // En lugar de pantalla negra, mostramos un cargando o el Header vacío
+    if (loading && !userData) {
+        return (
+            <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={primaryColor} />
+            </View>
+        );
+    }
+
     if (!userData) {
-        return <View style={{ flex: 1, backgroundColor: theme.background }} />;
+        return (
+            <View style={{ flex: 1, backgroundColor: theme.background }}>
+                <Header hasNotifications={false} />
+                <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                    <Text style={{color: theme.text}}>No se pudieron cargar los datos.</Text>
+                </View>
+            </View>
+        );
     }
 
     return (
