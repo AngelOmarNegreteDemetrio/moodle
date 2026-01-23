@@ -1,14 +1,10 @@
-// app/_layout.tsx
-
 import { Drawer } from 'expo-router/drawer';
 import { StatusBar } from "expo-status-bar";
 import React from 'react';
-
 import { ThemeProvider, useTheme } from '../app/context/themeContext';
 import MenuContent, { CustomHeader } from '../components/navigation/menu';
+import '../language/i18n';
 
-
-// Componente Wrapper para acceder al tema
 function AppWrapper() {
     const { theme, isDark } = useTheme();
 
@@ -17,18 +13,14 @@ function AppWrapper() {
             <StatusBar style={isDark ? "light" : "dark"} /> 
             
             <Drawer
-                drawerContent={MenuContent}
-                
+                drawerContent={(props) => <MenuContent {...props} />}
                 screenOptions={({ navigation }) => ({
-                    
                     headerShown: true, 
-                    
                     header: () => (
                         <CustomHeader 
                             onMenuPress={() => navigation.toggleDrawer()} 
                         />
                     ),
-                    
                     drawerType: 'slide', 
                     drawerStyle: { 
                         width: '75%',
@@ -39,17 +31,15 @@ function AppWrapper() {
                     }
                 })}
             >
-                {/* RUTA DE LOGIN: Cabecera OCULTA y se omite del menú Drawer */}
                 <Drawer.Screen 
                     name="auth/Login" 
                     options={{ 
-                        headerShown: false, // Oculta la barra de navegación en Login
+                        headerShown: false, 
                         title: 'Iniciar Sesión',
-                        drawerItemStyle: { display: 'none' } // Oculta el enlace del Drawer
+                        drawerItemStyle: { display: 'none' } 
                     }} 
                 />
                 
-                {/* Otras rutas */}
                 <Drawer.Screen 
                     name="index" 
                     options={{ 
@@ -72,7 +62,33 @@ function AppWrapper() {
                     name="auth/courseDetail" 
                     options={{ 
                         title: 'Detalle del Curso', 
-                        headerShown: false, // Cabecera oculta para esta ruta también
+                        headerShown: false, 
+                        drawerItemStyle: { display: 'none' }
+                    }} 
+                />
+
+                <Drawer.Screen 
+                    name="auth/messages" 
+                    options={{ 
+                        title: 'Mensajes', 
+                        drawerItemStyle: { display: 'none' }
+                    }} 
+                />
+
+                <Drawer.Screen 
+                    name="auth/chatDetail" 
+                    options={{ 
+                        title: 'Chat', 
+                        headerShown: false,
+                        drawerItemStyle: { display: 'none' }
+                    }} 
+                />
+
+                <Drawer.Screen 
+                    name="auth/language" 
+                    options={{ 
+                        title: 'Idioma', 
+                        drawerItemStyle: { display: 'none' }
                     }} 
                 />
                 
@@ -81,8 +97,6 @@ function AppWrapper() {
     );
 }
 
-
-// El Layout principal ENGLOBA toda la aplicación con el ThemeProvider
 export default function MainLayout() {
     return (
         <ThemeProvider>
