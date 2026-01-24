@@ -1,49 +1,54 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   FlatList,
   Image,
   RefreshControl,
   SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
+import { useAuth } from '../auth/authContext';
+import { useTheme } from '../context/themeContext';
 
 export const API_URL = "https://prueba.soluciones-hericraft.com/";
-export const LOGIN_TOKEN = "27e4d95c2dae2f748d6b4e0d631f507f";
-export const MY_USER_ID = 5;
 
 const Messages = () => {
   const router = useRouter();
+  const { theme, isDark } = useTheme();
+  const { userToken, userId } = useAuth();
+
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const primaryColor = isDark ? '#F55D69' : '#FF0000';
+
   const fetchConversations = async () => {
+    if (!userToken || !userId) return;
     setLoading(true);
-    const url = `${API_URL}webservice/rest/server.php?wstoken=${LOGIN_TOKEN}&wsfunction=core_message_get_conversations&moodlewsrestformat=json&userid=${MY_USER_ID}&type=0`;
+    const url = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&wsfunction=core_message_get_conversations&moodlewsrestformat=json&userid=${userId}`;
     try {
       const response = await fetch(url);
       const data = await response.json();
-      if (data.conversations) {
-        setConversations(data.conversations);
-      }
+      if (data && data.conversations) setConversations(data.conversations);
     } catch (err) {
-      console.log(err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       fetchConversations();
-    }, [])
+    }, [userToken, userId])
   );
 
   const searchUsers = async (text) => {
@@ -53,18 +58,14 @@ const Messages = () => {
       return;
     }
     setLoading(true);
-    const url = `${API_URL}webservice/rest/server.php?wstoken=${LOGIN_TOKEN}&wsfunction=core_enrol_get_enrolled_users&moodlewsrestformat=json&courseid=1`;
+    const url = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&wsfunction=core_enrol_get_enrolled_users&moodlewsrestformat=json&courseid=1`;
     try {
       const response = await fetch(url);
       const data = await response.json();
       if (Array.isArray(data)) {
         const filtered = data
-          .filter(user => user.fullname.toLowerCase().includes(text.toLowerCase()))
-          .map(user => ({
-            id: user.id,
-            fullname: user.fullname,
-            avatar: user.profileimageurlsmall
-          }));
+          .filter(u => u.fullname.toLowerCase().includes(text.toLowerCase()))
+          .map(u => ({ id: u.id, fullname: u.fullname, avatar: u.profileimageurlsmall }));
         setResults(filtered);
       }
     } catch (err) {
@@ -76,57 +77,68 @@ const Messages = () => {
 
   const renderItem = ({ item }) => {
     const isSearch = query.length >= 3;
-    const userId = isSearch ? item.id : item.members[0].id;
-    const fullname = isSearch ? item.fullname : item.members[0].fullname;
-    const avatar = isSearch ? item.avatar : item.members[0].profileimageurl;
-    const subText = isSearch ? "Iniciar nuevo chat" : (item.messages[0]?.text.replace(/<[^>]*>/g, '') || "Sin mensajes");
+    const contactId = isSearch ? item.id : (item.members.find(m => m.id != userId)?.id || item.members[0].id);
+    const contactName = isSearch ? item.fullname : (item.members.find(m => m.id != userId)?.fullname || item.members[0].fullname);
+    const contactImage = isSearch ? item.avatar : (item.members.find(m => m.id != userId)?.profileimageurl || item.members[0].profileimageurl);
+    const lastMsg = isSearch ? "Nuevo chat" : (item.messages?.[0]?.text.replace(/<[^>]*>?/gm, '') || "Sin mensajes");
 
     return (
       <TouchableOpacity 
-        style={styles.card} 
+        style={[styles.card, { backgroundColor: theme.card }]} 
         onPress={() => router.push({
           pathname: '/auth/chatDetail',
-          params: { userId, fullname }
+          params: { contactId, contactName, contactImage }
         })}
       >
-        <Image source={{ uri: avatar }} style={styles.avatar} />
+        <Image source={{ uri: contactImage || 'https://via.placeholder.com/150' }} style={styles.avatar} />
         <View style={styles.info}>
-          <Text style={styles.name}>{fullname}</Text>
-          <Text style={styles.lastMsg} numberOfLines={1}>{subText}</Text>
+          <Text style={[styles.name, { color: theme.text }]}>{contactName}</Text>
+          <Text style={[styles.lastMsg, { color: theme.textSecondary }]} numberOfLines={1}>{lastMsg}</Text>
         </View>
         {!isSearch && item.unreadcount > 0 && (
-          <View style={styles.unreadDot} />
+          <View style={[styles.unreadBadge, { backgroundColor: primaryColor }]}>
+            <Text style={styles.unreadText}>{item.unreadcount}</Text>
+          </View>
         )}
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Mensajes</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Buscar contacto..."
-          value={query}
-          onChangeText={searchUsers}
-          placeholderTextColor="#999"
-        />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={primaryColor} />
+      
+      <View style={[styles.upperHeader, { backgroundColor: primaryColor }]}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Chats</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      </View>
 
-        <Text style={styles.sectionTitle}>
-          {query.length >= 3 ? "Resultados de búsqueda" : "Conversaciones recientes"}
-        </Text>
+      <View style={styles.body}>
+        <View style={[styles.searchWrapper, { backgroundColor: isDark ? '#1A1A1A' : '#F2F2F2' }]}>
+          <Text style={[styles.searchIcon, { color: theme.textSecondary }]}>🔍</Text>
+          <TextInput
+            style={[styles.input, { color: theme.text }]}
+            placeholder="Buscar contacto..."
+            value={query}
+            onChangeText={searchUsers}
+            placeholderTextColor="#888"
+          />
+        </View>
 
         <FlatList
           data={query.length >= 3 ? results : conversations}
-          keyExtractor={(item, index) => (item.id || index).toString()}
+          keyExtractor={(item, index) => (query.length >= 3 ? `s-${item.id}` : `c-${item.id}`)}
           renderItem={renderItem}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={fetchConversations} />
+            <RefreshControl refreshing={loading} onRefresh={fetchConversations} tintColor={primaryColor} />
           }
-          ListEmptyComponent={() => (
-            !loading && <Text style={styles.empty}>No se encontraron contactos o chats.</Text>
-          )}
         />
       </View>
     </SafeAreaView>
@@ -134,18 +146,46 @@ const Messages = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { flex: 1, paddingHorizontal: 20 },
-  title: { fontSize: 28, fontWeight: 'bold', marginTop: 20, color: '#000' },
-  sectionTitle: { fontSize: 12, fontWeight: 'bold', color: '#aaa', marginVertical: 10, textTransform: 'uppercase' },
-  input: { height: 45, backgroundColor: '#f0f0f0', borderRadius: 10, paddingHorizontal: 15, marginVertical: 10 },
-  card: { flexDirection: 'row', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#eee', alignItems: 'center' },
-  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#eee' },
+  container: { flex: 1 },
+  upperHeader: { 
+    height: 80, 
+    justifyContent: 'flex-end', 
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    paddingBottom: 15,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  backButton: { padding: 5 },
+  backIcon: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
+  headerTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
+  body: { flex: 1, paddingHorizontal: 20, paddingTop: 25 },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 50,
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+  },
+  searchIcon: { fontSize: 16, marginRight: 10 },
+  input: { flex: 1, height: '100%', fontSize: 15 },
+  card: { flexDirection: 'row', padding: 15, borderRadius: 20, marginBottom: 12, alignItems: 'center', elevation: 1 },
+  avatar: { width: 55, height: 55, borderRadius: 27.5 },
   info: { marginLeft: 15, flex: 1 },
-  name: { fontSize: 16, fontWeight: '600' },
-  lastMsg: { fontSize: 14, color: '#888', marginTop: 2 },
-  unreadDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#007bff' },
-  empty: { textAlign: 'center', marginTop: 50, color: '#bbb' }
+  name: { fontSize: 16, fontWeight: '700' },
+  lastMsg: { fontSize: 13, marginTop: 4, opacity: 0.6 },
+  unreadBadge: { minWidth: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
+  unreadText: { color: '#fff', fontSize: 10, fontWeight: 'bold' }
 });
 
 export default Messages;
