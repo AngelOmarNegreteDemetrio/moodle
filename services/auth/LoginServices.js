@@ -1,13 +1,5 @@
 import axios from "axios";
-import * as SecureStore from 'expo-secure-store';
 import { API_URL } from "../../constants/url";
-
-export async function logoutUser() {
-    await SecureStore.deleteItemAsync("moodleToken");
-    await SecureStore.deleteItemAsync("moodleUserId");
-    await SecureStore.deleteItemAsync("lastLoggedInUsername");
-    await SecureStore.deleteItemAsync("lastLoggedInPassword");
-}
 
 async function getUserData(token, username) {
     const functionName = "core_user_get_users_by_field";
@@ -27,7 +19,7 @@ async function getUserData(token, username) {
     if (userDataArray && userDataArray.length > 0 && !userDataArray.exception) {
         return userDataArray[0];
     } else {
-        throw new Error("No se pudo obtener el ID de usuario después de la autenticación.");
+        throw new Error("No se pudo obtener el ID de usuario.");
     }
 }
 
@@ -48,19 +40,11 @@ export async function LoginServices(username, password) {
         const tokenData = tokenResponse.data;
 
         if (tokenData.error) {
-            const errorMessage = tokenData.error
-                ? `${tokenData.error} (${tokenData.errorcode || 'error de Moodle'})`
-                : "Usuario o contraseña incorrectos";
-            throw new Error(errorMessage);
+            throw new Error(tokenData.error);
         }
 
         const token = tokenData.token;
         const userDetails = await getUserData(token, username);
-
-        await SecureStore.setItemAsync("moodleToken", token);
-        await SecureStore.setItemAsync("lastLoggedInUsername", username);
-        await SecureStore.setItemAsync("lastLoggedInPassword", password);
-        await SecureStore.setItemAsync("moodleUserId", userDetails.id.toString());
 
         return {
             token: token,
@@ -70,12 +54,6 @@ export async function LoginServices(username, password) {
         };
 
     } catch (error) {
-        if (error.response) {
-            throw new Error(`Error del servidor: ${error.response.status}. Por favor, verifica tu URL o credenciales.`);
-        } else if (error.request) {
-            throw new Error("No se pudo conectar al servidor Moodle. Verifica tu conexión a internet.");
-        } else {
-            throw new Error(error.message || "Error desconocido durante el inicio de sesión.");
-        }
+        throw new Error(error.message || "Error en el login");
     }
 }

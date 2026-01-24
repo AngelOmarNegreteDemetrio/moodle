@@ -4,6 +4,8 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    ActivityIndicator // Añadimos esto para el feedback visual
+    ,
     Dimensions,
     FlatList,
     Image,
@@ -13,7 +15,7 @@ import {
     Text,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../app/auth/authContext';
 import { useTheme } from '../app/context/themeContext';
 import Header from '../components/navigation/menu';
 import { GetUserBadges } from "../services/auth/tasks";
@@ -24,25 +26,35 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen() {
     const { t, i18n } = useTranslation(); 
     const { theme, isDark } = useTheme(); 
+    const { userToken, userId } = useAuth(); // Usamos esto directamente
     const [userData, setUserData] = useState(null);
     const [badges, setBadges] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const primaryColor = isDark ? '#F55D69' : '#FF0000'; 
-    const darkGray = '#1A1A1A';
+    const dynamicHeaderColor = isDark ? '#1A1A1A' : '#F2F2F2';
 
     useFocusEffect(
         useCallback(() => {
             let isActive = true;
+
             const fetchAllData = async () => {
                 try {
-                    const token = await AsyncStorage.getItem("moodleToken");
-                    const userId = await AsyncStorage.getItem("moodleUserId");
+                    setLoading(true);
+                    
+                    // Priorizamos el token del contexto, si no está, buscamos en storage
+                    const token = userToken || await AsyncStorage.getItem("moodleToken");
+                    const id = userId || await AsyncStorage.getItem("moodleUserId");
                     const username = await AsyncStorage.getItem("lastLoggedInUsername");
 
-                    if (!token || !username) return;
+                    // Si después de intentar ambos no hay nada, no podemos cargar
+                    if (!token || !username) {
+                        setLoading(false);
+                        return;
+                    }
 
                     const data = await GetUserInfoService(username, 'username');
-                    const badgesData = await GetUserBadges(token, userId);
+                    const badgesData = await GetUserBadges(token, id);
 
                     if (isActive && data) {
                         const nivel = (data.department || "").trim().toUpperCase();
@@ -78,29 +90,49 @@ export default function HomeScreen() {
                     }
                 } catch (error) {
                     console.error("Error Home:", error);
+                } finally {
+                    if (isActive) setLoading(false);
                 }
             };
 
             fetchAllData();
-            return () => { isActive = false; };
-        }, [i18n.language])
+            return () => { 
+                isActive = false; 
+            };
+        }, [i18n.language, userToken, userId]) // Reacciona cuando el token cambie
     );
 
+    // En lugar de pantalla negra, mostramos un cargando o el Header vacío
+    if (loading && !userData) {
+        return (
+            <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={primaryColor} />
+            </View>
+        );
+    }
+
     if (!userData) {
-        return <View style={{ flex: 1, backgroundColor: theme.background }} />;
+        return (
+            <View style={{ flex: 1, backgroundColor: theme.background }}>
+                <Header hasNotifications={false} />
+                <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                    <Text style={{color: theme.text}}>No se pudieron cargar los datos.</Text>
+                </View>
+            </View>
+        );
     }
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: darkGray }} edges={['top']}>
-            <StatusBar barStyle="light-content" backgroundColor={darkGray} />
+        <View style={{ flex: 1, backgroundColor: theme.background }}>
+            <StatusBar barStyle="light-content" backgroundColor={primaryColor} />
+            
             <Header hasNotifications={true} />
 
             <ScrollView 
-                style={{ backgroundColor: theme.background }} 
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 40 }}
             >
-                <View style={[styles.upperHeader, { backgroundColor: darkGray }]}>
+                <View style={[styles.upperHeader, { backgroundColor: dynamicHeaderColor }]}>
                     <View style={[styles.profileContainer, { borderColor: theme.background, backgroundColor: theme.card }]}>
                         <Image 
                             source={{ uri: userData.profileImageUrl || 'https://via.placeholder.com/150' }} 
@@ -157,7 +189,7 @@ export default function HomeScreen() {
                                 <Text numberOfLines={1} style={[styles.medalName, { color: theme.text }]}>{item.name}</Text>
                             </View>
                         )}
-                        ListEmptyComponent={<Text style={styles.emptyText}>Sin medallas aún</Text>}
+                        ListEmptyComponent={<Text style={[styles.emptyText, { color: theme.textSecondary }]}>Sin medallas aún</Text>}
                     />
                 </View>
 
@@ -181,7 +213,7 @@ export default function HomeScreen() {
                     <Text style={styles.versionText}>Versión 2.0.26</Text>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -196,8 +228,27 @@ const DetailRow = ({ icon, label, value, theme }) => (
 );
 
 const styles = StyleSheet.create({
-    upperHeader: { height: 80, alignItems: 'center', justifyContent: 'flex-end', zIndex: 1 },
-    profileContainer: { width: 110, height: 110, borderRadius: 55, borderWidth: 5, overflow: 'hidden', marginBottom: -55, elevation: 8 },
+    upperHeader: { 
+        height: 80, 
+        alignItems: 'center', 
+        justifyContent: 'flex-end', 
+        zIndex: 1,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+    },
+    profileContainer: { 
+        width: 110, 
+        height: 110, 
+        borderRadius: 55, 
+        borderWidth: 5, 
+        overflow: 'hidden', 
+        marginBottom: -55, 
+        elevation: 8,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4.65,
+    },
     profileImg: { width: '100%', height: '100%' },
     infoMain: { marginTop: 65, alignItems: 'center', paddingHorizontal: 20 },
     statusRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
