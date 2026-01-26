@@ -75,7 +75,7 @@ export default function LoginScreen() {
                     },
                 });
 
-                await login(response.token, response.userid);
+                await login(response.token, response.userid, username, password);
             }
 
         } catch (error) {

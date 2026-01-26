@@ -1,7 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Platform,
@@ -11,48 +10,49 @@ import {
     View
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useAuth } from '../auth/authContext';
 import { useTheme } from '../context/themeContext';
 
 export default function WorkDetailScreen() {
     const router = useRouter();
     const { url, courseId, courseName } = useLocalSearchParams();
     const { isDark } = useTheme();
-    const [credentials, setCredentials] = useState({ user: '', pass: '' });
-    const [isVisible, setIsVisible] = useState(false);
+    const { userData } = useAuth();
     const webViewRef = useRef(null);
+    const [loading, setLoading] = useState(true);
 
     const PRIMARY_COLOR = isDark ? '#F55D69' : '#FF0000';
 
-    useEffect(() => {
-        const getCreds = async () => {
-            try {
-                const user = await SecureStore.getItemAsync("lastLoggedInUsername");
-                const pass = await SecureStore.getItemAsync("lastLoggedInPassword");
-                if (user && pass) setCredentials({ user, pass });
-            } catch (error) {
-                console.error(error);
-            }
-        };
-        getCreds();
-    }, []);
-
     const loginJS = `
         (function() {
-            var userField = document.getElementById('username') || document.getElementsByName('username')[0];
-            var passField = document.getElementById('password') || document.getElementsByName('password')[0];
-            var loginBtn = document.getElementById('loginbtn') || document.querySelector('button[type="submit"]');
+            var user = ${JSON.stringify(userData?.username || '')};
+            var pass = ${JSON.stringify(userData?.password || '')};
+
+            if(!user || !pass) return;
+
+            var checkExist = setInterval(function() {
+                var userField = document.querySelector('input[name="username"], #username');
+                var passField = document.querySelector('input[name="password"], #password');
+                var loginBtn = document.querySelector('button[type="submit"], #loginbtn, .btn-primary');
+
+                if (userField && passField && loginBtn) {
+                    userField.value = user;
+                    passField.value = pass;
+                    
+                    setTimeout(function() {
+                        loginBtn.click();
+                    }, 250);
+                    
+                    clearInterval(checkExist);
+                }
+            }, 200);
             
-            if (userField && passField && loginBtn) {
-                userField.value = '${credentials.user}';
-                passField.value = '${credentials.pass}';
-                loginBtn.click();
-            }
+            setTimeout(function() { clearInterval(checkExist); }, 8000);
         })();
         true;
     `;
 
     const handleBack = () => {
-        setIsVisible(false);
         if (courseId) {
             router.replace({
                 pathname: "/auth/courseDetail",
@@ -76,24 +76,22 @@ export default function WorkDetailScreen() {
             <View style={styles.webViewContainer}>
                 <WebView 
                     ref={webViewRef}
-                    key={url}
                     source={{ uri: url }} 
+                    onLoadStart={() => setLoading(true)}
                     onLoadEnd={() => {
                         webViewRef.current.injectJavaScript(loginJS);
-                        setIsVisible(true);
+                        setLoading(false);
                     }}
                     domStorageEnabled={true}
                     javaScriptEnabled={true}
-                    allowFileAccess={true}
-                    playsInline={true}
-                    allowsFullscreenVideo={true}
                     startInLoadingState={true}
-                    renderLoading={() => (
-                        <View style={styles.loader}>
-                            <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-                        </View>
-                    )}
+                    cacheEnabled={false}
                 />
+                {loading && (
+                    <View style={styles.loader}>
+                        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+                    </View>
+                )}
             </View>
         </View>
     );

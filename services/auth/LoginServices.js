@@ -50,6 +50,7 @@ export async function LoginServices(username, password) {
             token: token,
             userid: userDetails.id,
             username: username,
+            password: password,
             success: true
         };
 
