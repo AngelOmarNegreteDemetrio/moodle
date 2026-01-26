@@ -17,6 +17,7 @@ const GET_DESC = (course, t) => {
 export default function CVGeneratorScreen() {
     const { t } = useTranslation();
     const [data, setData] = useState(null);
+    const [badges, setBadges] = useState([]);
     const [loading, setLoading] = useState(true);
     const { theme, isDark } = useTheme();
     
@@ -26,7 +27,10 @@ export default function CVGeneratorScreen() {
             setLoading(true);
             try {
                 const cvData = await getCVData();
-                if (isActive && cvData) setData(cvData);
+                if (isActive && cvData) {
+                    setData(cvData);
+                    setBadges(cvData.userBadges || []);
+                }
             } catch (e) {
                 Alert.alert(t('common.error'), t('cv.sync_error'));
             } finally { 
@@ -56,9 +60,13 @@ export default function CVGeneratorScreen() {
                 <Image source={{ uri: user?.profileimageurl || 'https://via.placeholder.com/150' }} style={[styles.img, { borderColor: PRIMARY }]} />
                 <View style={styles.flex}>
                     <Text style={[styles.name, TEXT]}>{user?.fullname}</Text>
-                    <Text style={[styles.job, { color: PRIMARY }]}>{t('cv.profile_title')}</Text>
-                    <Text style={[styles.contact, TEXT]}>✉️ {user?.email}</Text>
-                    <Text style={[styles.contact, TEXT]}>📞 {user?.phone2 || user?.phone1 || t('cv.no_phone')}</Text>
+                    <Text style={[styles.job, { color: PRIMARY }]}>{user?.department || t('cv.profile_title')}</Text>
+                    
+                    <View style={styles.infoGrid}>
+                        <Text style={[styles.contact, TEXT]}>✉️ {user?.email}</Text>
+                        <Text style={[styles.contact, TEXT]}>📞 {user?.phone}</Text>
+                        {user?.location ? <Text style={[styles.contact, TEXT]}>📍 {user?.location}</Text> : null}
+                    </View>
                 </View>
             </View>
 
@@ -66,6 +74,19 @@ export default function CVGeneratorScreen() {
                 <Section title={t('cv.summary_title')} color={PRIMARY} theme={theme}>
                     <View style={[styles.descBox, { borderLeftColor: PRIMARY }]}>
                         <Text style={[styles.descT, TEXT]}>{stripHtml(user.description)}</Text>
+                    </View>
+                </Section>
+            )}
+
+            {badges.length > 0 && (
+                <Section title={t('cv.badges_title', 'Insignias y Logros')} color={PRIMARY} theme={theme}>
+                    <View style={styles.badgesGrid}>
+                        {badges.map((badge, index) => (
+                            <View key={badge.id || index} style={styles.badgeItem}>
+                                <Image source={{ uri: badge.badgeurl }} style={styles.badgeImg} />
+                                <Text style={[styles.badgeName, TEXT]} numberOfLines={2}>{badge.name}</Text>
+                            </View>
+                        ))}
                     </View>
                 </Section>
             )}
@@ -97,16 +118,21 @@ const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', marginBottom: 35 },
     flex: { flex: 1 },
     itemSpace: { marginBottom: 30 },
-    img: { width: 90, height: 90, borderRadius: 15, borderWidth: 2, marginRight: 15 },
+    img: { width: 95, height: 95, borderRadius: 12, borderWidth: 2, marginRight: 15 },
     line: { height: 3, width: 35, marginTop: 5, marginBottom: 20 },
     descBox: { paddingLeft: 15, borderLeftWidth: 3, paddingVertical: 2 },
     sec: { marginBottom: 35 },
-    name: { fontSize: 24, fontWeight: 'bold', letterSpacing: -0.5 },
-    job: { fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8, textTransform: 'uppercase' },
-    contact: { fontSize: 12, marginBottom: 2, opacity: 0.9 },
-    secT: { fontSize: 16, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
+    name: { fontSize: 22, fontWeight: 'bold', letterSpacing: -0.5 },
+    job: { fontSize: 11, fontWeight: '800', letterSpacing: 1, marginBottom: 10, textTransform: 'uppercase' },
+    infoGrid: { marginTop: 5 },
+    contact: { fontSize: 12, marginBottom: 3, opacity: 0.85 },
+    secT: { fontSize: 15, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
     bold16: { fontSize: 16, fontWeight: 'bold' },
     meta: { fontSize: 10, fontWeight: 'bold', marginBottom: 8, opacity: 0.8 },
     justify13: { fontSize: 13, textAlign: 'justify', lineHeight: 20 },
-    descT: { fontSize: 14, fontStyle: 'italic', lineHeight: 22, textAlign: 'justify' }
+    descT: { fontSize: 14, fontStyle: 'italic', lineHeight: 22, textAlign: 'justify' },
+    badgesGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+    badgeItem: { width: '30%', alignItems: 'center', marginBottom: 15, marginRight: '3%' },
+    badgeImg: { width: 55, height: 55, marginBottom: 5, resizeMode: 'contain' },
+    badgeName: { fontSize: 9, fontWeight: '600', textAlign: 'center' }
 });
