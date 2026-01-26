@@ -4,8 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator // Añadimos esto para el feedback visual
-    ,
+    ActivityIndicator,
     Dimensions,
     FlatList,
     Image,
@@ -26,7 +25,7 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen() {
     const { t, i18n } = useTranslation(); 
     const { theme, isDark } = useTheme(); 
-    const { userToken, userId } = useAuth(); // Usamos esto directamente
+    const { userToken, userId } = useAuth(); 
     const [userData, setUserData] = useState(null);
     const [badges, setBadges] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -41,13 +40,10 @@ export default function HomeScreen() {
             const fetchAllData = async () => {
                 try {
                     setLoading(true);
-                    
-                    // Priorizamos el token del contexto, si no está, buscamos en storage
                     const token = userToken || await AsyncStorage.getItem("moodleToken");
                     const id = userId || await AsyncStorage.getItem("moodleUserId");
                     const username = await AsyncStorage.getItem("lastLoggedInUsername");
 
-                    // Si después de intentar ambos no hay nada, no podemos cargar
                     if (!token || !username) {
                         setLoading(false);
                         return;
@@ -74,7 +70,8 @@ export default function HomeScreen() {
                         else if (data.mobile && data.mobile.trim() !== "") phoneValue = data.mobile;
 
                         setUserData({
-                            name: data.fullname || `${data.firstname} ${data.lastname}`,
+                            firstName: data.firstname || data.fullname || "Usuario",
+                            lastName: data.lastname || "",
                             email: data.email,
                             profileImageUrl: data.profileimageurl,
                             city: data.city || "Aguascalientes",
@@ -99,10 +96,9 @@ export default function HomeScreen() {
             return () => { 
                 isActive = false; 
             };
-        }, [i18n.language, userToken, userId]) // Reacciona cuando el token cambie
+        }, [i18n.language, userToken, userId])
     );
 
-    // En lugar de pantalla negra, mostramos un cargando o el Header vacío
     if (loading && !userData) {
         return (
             <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>
@@ -125,7 +121,6 @@ export default function HomeScreen() {
     return (
         <View style={{ flex: 1, backgroundColor: theme.background }}>
             <StatusBar barStyle="light-content" backgroundColor={primaryColor} />
-            
             <Header hasNotifications={true} />
 
             <ScrollView 
@@ -146,8 +141,18 @@ export default function HomeScreen() {
                         <View style={styles.onlineDot} />
                         <Text style={styles.statusText}>Estudiante Activo</Text>
                     </View>
-                    <Text style={[styles.userName, { color: theme.text }]}>{userData.name}</Text>
-                    <Text style={styles.userEmail}>{userData.email}</Text>
+                    
+                    <Text style={[styles.userName, { color: theme.text }]}>
+                        {userData.firstName}
+                    </Text>
+                    
+                    {userData.lastName ? (
+                        <Text style={[styles.userName, { color: theme.text, fontWeight: '700', marginTop: -8 }]}>
+                            {userData.lastName}
+                        </Text>
+                    ) : null}
+
+                    <Text style={[styles.userEmail, { marginTop: 2 }]}>{userData.email}</Text>
                     
                     <View style={styles.tagWrapper}>
                         <View style={[styles.combinedBadge, { backgroundColor: primaryColor + '15', borderColor: primaryColor + '30' }]}>
@@ -255,7 +260,7 @@ const styles = StyleSheet.create({
     onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50', marginRight: 6 },
     statusText: { fontSize: 11, fontWeight: '700', color: '#4CAF50', textTransform: 'uppercase' },
     userName: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
-    userEmail: { fontSize: 14, color: '#888', marginTop: 2 },
+    userEmail: { fontSize: 14, color: '#888' },
     tagWrapper: { marginTop: 15 },
     combinedBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
     combinedBadgeText: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
