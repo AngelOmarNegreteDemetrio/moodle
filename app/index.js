@@ -25,7 +25,7 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen() {
     const { t, i18n } = useTranslation(); 
     const { theme, isDark } = useTheme(); 
-    const { userToken, userId } = useAuth(); 
+    const { userToken, userId, userData: authData } = useAuth(); 
     const [userData, setUserData] = useState(null);
     const [badges, setBadges] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -40,17 +40,23 @@ export default function HomeScreen() {
             const fetchAllData = async () => {
                 try {
                     setLoading(true);
+                    
                     const token = userToken || await AsyncStorage.getItem("moodleToken");
                     const id = userId || await AsyncStorage.getItem("moodleUserId");
-                    const username = await AsyncStorage.getItem("lastLoggedInUsername");
+                    const storedUsername = await AsyncStorage.getItem("lastLoggedInUsername");
+                    
+                    // Prioridad de identificador: Contexto > AsyncStorage > ID
+                    const identifier = authData?.username || storedUsername || id;
 
-                    if (!token || !username) {
-                        setLoading(false);
+                    if (!token || !identifier) {
+                        if (isActive) setLoading(false);
                         return;
                     }
 
-                    const data = await GetUserInfoService(username, 'username');
-                    const badgesData = await GetUserBadges(token, id);
+                    const [data, badgesData] = await Promise.all([
+                        GetUserInfoService(identifier, 'username'),
+                        GetUserBadges(token, id)
+                    ]);
 
                     if (isActive && data) {
                         const nivel = (data.department || "").trim().toUpperCase();
@@ -64,10 +70,10 @@ export default function HomeScreen() {
                         }
 
                         let phoneValue = "No disponible";
-                        if (data.phone1 && data.phone1.trim() !== "") phoneValue = data.phone1;
-                        else if (data.phone2 && data.phone2.trim() !== "") phoneValue = data.phone2;
-                        else if (data.phone && data.phone.trim() !== "") phoneValue = data.phone;
-                        else if (data.mobile && data.mobile.trim() !== "") phoneValue = data.mobile;
+                        if (data.phone1) phoneValue = data.phone1;
+                        else if (data.phone2) phoneValue = data.phone2;
+                        else if (data.phone) phoneValue = data.phone;
+                        else if (data.mobile) phoneValue = data.mobile;
 
                         setUserData({
                             firstName: data.firstname || data.fullname || "Usuario",
@@ -86,20 +92,18 @@ export default function HomeScreen() {
                         setBadges(badgesData || []);
                     }
                 } catch (error) {
-                    console.error("Error Home:", error);
+                    console.error("Error en HomeScreen:", error);
                 } finally {
                     if (isActive) setLoading(false);
                 }
             };
 
             fetchAllData();
-            return () => { 
-                isActive = false; 
-            };
-        }, [i18n.language, userToken, userId])
+            return () => { isActive = false; };
+        }, [userToken, userId, authData?.username, i18n.language])
     );
 
-    if (loading && !userData) {
+    if (loading) {
         return (
             <View style={{ flex: 1, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>
                 <ActivityIndicator size="large" color={primaryColor} />
@@ -111,8 +115,11 @@ export default function HomeScreen() {
         return (
             <View style={{ flex: 1, backgroundColor: theme.background }}>
                 <Header hasNotifications={false} />
-                <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                    <Text style={{color: theme.text}}>No se pudieron cargar los datos.</Text>
+                <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20}}>
+                    <Ionicons name="alert-circle-outline" size={50} color={primaryColor} />
+                    <Text style={{color: theme.text, textAlign: 'center', marginTop: 10}}>
+                        No pudimos cargar tu perfil. Revisa tu conexión o vuelve a iniciar sesión.
+                    </Text>
                 </View>
             </View>
         );
@@ -120,7 +127,7 @@ export default function HomeScreen() {
 
     return (
         <View style={{ flex: 1, backgroundColor: theme.background }}>
-            <StatusBar barStyle="light-content" backgroundColor={primaryColor} />
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={primaryColor} />
             <Header hasNotifications={true} />
 
             <ScrollView 

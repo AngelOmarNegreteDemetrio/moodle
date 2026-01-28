@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useTranslation } from 'react-i18next';
@@ -61,7 +60,7 @@ export default function LoginScreen() {
             const response = await LoginServices(username, password);
             
             if (response.success) {
-                await AsyncStorage.setItem('lastLoggedInUsername', username);
+                await login(response.token, response.userid, username, password);
 
                 Toast.show({
                     type: 'custom_success', 
@@ -75,7 +74,9 @@ export default function LoginScreen() {
                     },
                 });
 
-                await login(response.token, response.userid, username, password);
+                setTimeout(() => {
+                    router.replace('/');
+                }, 100);
             }
 
         } catch (error) {
