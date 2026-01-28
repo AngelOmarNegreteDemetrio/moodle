@@ -39,7 +39,13 @@ const Messages = () => {
         try {
             const response = await fetch(url);
             const data = await response.json();
-            if (data && data.conversations) setConversations(data.conversations);
+            if (data && data.conversations) {
+                const filtered = data.conversations.filter(conv => {
+                    const otherMember = conv.members.find(m => m.id != userId);
+                    return otherMember !== undefined;
+                });
+                setConversations(filtered);
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -49,16 +55,33 @@ const Messages = () => {
 
     useFocusEffect(
         useCallback(() => {
+            setQuery('');
+            setResults([]);
             fetchConversations(false);
         }, [userToken, userId])
     );
 
-    const handlePressConversation = (contactId, contactName, contactImage, conversationId) => {
+    const handlePressConversation = async (contactId, contactName, contactImage, conversation) => {
         setConversations(prev => 
             prev.map(conv => 
-                conv.id === conversationId ? { ...conv, unreadcount: 0 } : conv
+                conv.id === conversation.id ? { ...conv, unreadcount: 0 } : conv
             )
         );
+
+        try {
+            const markAllReadUrl = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&wsfunction=core_message_mark_all_conversation_messages_as_read&moodlewsrestformat=json&userid=${userId}&otheruserid=${contactId}`;
+            await fetch(markAllReadUrl);
+
+            if (conversation.messages && conversation.messages.length > 0) {
+                const lastMsg = conversation.messages[0];
+                if (lastMsg.useridfrom != userId) {
+                    const singleReadUrl = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&wsfunction=core_message_mark_message_read&moodlewsrestformat=json&messageid=${lastMsg.id}&timeread=${Math.floor(Date.now() / 1000)}`;
+                    await fetch(singleReadUrl);
+                }
+            }
+        } catch (err) {
+            console.log("Sync Error:", err);
+        }
 
         router.push({
             pathname: '/auth/chatDetail',
@@ -79,7 +102,7 @@ const Messages = () => {
             const data = await response.json();
             if (Array.isArray(data)) {
                 const filtered = data
-                    .filter(u => u.fullname.toLowerCase().includes(text.toLowerCase()))
+                    .filter(u => u.id != userId && u.fullname.toLowerCase().includes(text.toLowerCase()))
                     .map(u => ({ id: u.id, fullname: u.fullname, avatar: u.profileimageurlsmall }));
                 setResults(filtered);
             }
@@ -101,7 +124,7 @@ const Messages = () => {
             <TouchableOpacity 
                 activeOpacity={0.8}
                 style={[styles.card, { backgroundColor: theme.card }]} 
-                onPress={() => handlePressConversation(contactId, contactName, contactImage, item.id)}
+                onPress={() => handlePressConversation(contactId, contactName, contactImage, item)}
             >
                 <Image source={{ uri: contactImage || 'https://via.placeholder.com/150' }} style={styles.avatar} />
                 <View style={styles.info}>
@@ -127,11 +150,9 @@ const Messages = () => {
                         <TouchableOpacity onPress={() => router.back()} style={styles.sideButton}>
                             <Ionicons name="arrow-back" size={28} color="white" />
                         </TouchableOpacity>
-
                         <View style={styles.titleContainer}>
                             <Text style={styles.headerTitle}>Chats</Text>
                         </View>
-
                         <View style={styles.sideButton} />
                     </View>
                 </SafeAreaView>
@@ -152,7 +173,7 @@ const Messages = () => {
 
                     <FlatList
                         data={query.length >= 3 ? results : conversations}
-                        keyExtractor={(item, index) => (query.length >= 3 ? `s-${item.id}` : `c-${item.id}`)}
+                        keyExtractor={(item) => (query.length >= 3 ? `s-${item.id}` : `c-${item.id}`)}
                         renderItem={renderItem}
                         contentContainerStyle={{ paddingBottom: 40 }}
                         showsVerticalScrollIndicator={false}
@@ -167,64 +188,16 @@ const Messages = () => {
 };
 
 const styles = StyleSheet.create({
-    headerWrapper: {
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-    },
-    headerContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 60,
-        paddingHorizontal: 10,
-        justifyContent: 'space-between',
-    },
-    titleContainer: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: -1
-    },
-    headerTitle: {
-        color: 'white',
-        fontSize: 20,
-        fontWeight: 'bold',
-        textAlign: 'center'
-    },
-    sideButton: { 
-        width: 45,
-        height: 45,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+    headerWrapper: { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 2 },
+    headerContent: { flexDirection: 'row', alignItems: 'center', height: 60, paddingHorizontal: 10, justifyContent: 'space-between' },
+    titleContainer: { position: 'absolute', left: 0, right: 0, justifyContent: 'center', alignItems: 'center', zIndex: -1 },
+    headerTitle: { color: 'white', fontSize: 20, fontWeight: 'bold', textAlign: 'center' },
+    sideButton: { width: 45, height: 45, justifyContent: 'center', alignItems: 'center' },
     container: { flex: 1 },
     body: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
-    searchWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 50,
-        borderRadius: 15,
-        paddingHorizontal: 15,
-        marginBottom: 20,
-    },
+    searchWrapper: { flexDirection: 'row', alignItems: 'center', height: 50, borderRadius: 15, paddingHorizontal: 15, marginBottom: 20 },
     input: { flex: 1, height: '100%', fontSize: 15 },
-    card: { 
-        flexDirection: 'row', 
-        padding: 15, 
-        borderRadius: 12, 
-        marginBottom: 12, 
-        alignItems: 'center', 
-        elevation: 2,
-        shadowColor: '#000', 
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1, 
-        shadowRadius: 2,
-    },
+    card: { flexDirection: 'row', padding: 15, borderRadius: 12, marginBottom: 12, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
     avatar: { width: 55, height: 55, borderRadius: 27.5 },
     info: { marginLeft: 15, flex: 1 },
     cardTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
