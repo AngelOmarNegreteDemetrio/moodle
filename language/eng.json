@@ -27,12 +27,17 @@
     "profile_title": "PROFESSIONAL ACADEMIC PROFILE",
     "no_phone": "Not registered",
     "summary_title": "Executive Summary",
+    "badges_title": "Badges and Achievements",
     "formation_title": "Education & Competencies",
     "moodle_certified": "INSTITUTIONAL COURSE • MOODLE CERTIFIED",
     "sync_error": "Could not sync profile.",
-    "mastery": "Mastery in",
+    "mastery": "Mastery of",
     "training": "In training",
-    "course_description": "Development of analytical and technical competencies applied to {{name}}, with a practical focus on problem solving and project implementation."
+    "desc_template_1": "Development of analytical and technical competencies applied to {{name}}, with a strong practical focus on solving real-world problems.",
+    "desc_template_2": "Specialization in {{name}}, strengthening critical skills through the implementation of projects and active methodologies.",
+    "desc_template_3": "Technical training oriented to the mastery of {{name}}, integrating theoretical knowledge with practical applications in professional environments.",
+    "desc_template_4": "Comprehensive training in {{name}} focused on the acquisition of strategic tools and the development of logical thinking.",
+    "desc_template_5": "In-depth study of the fundamentals of {{name}}, facilitating the execution of complex processes and efficient project management."
   },
   "menu": {
     "home": "Home",

@@ -10,8 +10,19 @@ const stripHtml = (html) => html ? html.replace(/<[^>]*>/g, '').trim() : '';
 const GET_DESC = (course, t) => {
     const isDone = course.progress >= 99 || course.completed;
     const name = course.fullname;
-    const base = t('cv.course_description', { name }); 
-    return isDone ? `${t('cv.mastery')} ${name}: ${base}` : `${t('cv.training')}: ${base}`;
+
+    const templates = [
+        t('cv.desc_template_1', { name }),
+        t('cv.desc_template_2', { name }),
+        t('cv.desc_template_3', { name }),
+        t('cv.desc_template_4', { name }),
+        t('cv.desc_template_5', { name })
+    ];
+
+    const hash = name.length % templates.length;
+    const description = templates[hash];
+
+    return isDone ? `${t('cv.mastery')}: ${description}` : `${t('cv.training')}: ${description}`;
 };
 
 export default function CVGeneratorScreen() {
@@ -79,7 +90,7 @@ export default function CVGeneratorScreen() {
             )}
 
             {badges.length > 0 && (
-                <Section title={t('cv.badges_title', 'Insignias y Logros')} color={PRIMARY} theme={theme}>
+                <Section title={t('cv.badges_title')} color={PRIMARY} theme={theme}>
                     <View style={styles.badgesGrid}>
                         {badges.map((badge, index) => (
                             <View key={badge.id || index} style={styles.badgeItem}>
