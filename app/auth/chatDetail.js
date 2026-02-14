@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -20,177 +21,232 @@ import { useTheme } from '../context/themeContext';
 export const API_URL = "https://prueba.soluciones-hericraft.com/";
 
 const ChatDetail = () => {
-  const { contactId, contactName, contactImage } = useLocalSearchParams();
-  const router = useRouter();
-  const { theme, isDark } = useTheme();
-  const { userToken, userId: MY_USER_ID } = useAuth();
-  
-  const flatListRef = useRef();
-  const [message, setMessage] = useState('');
-  const [messagesList, setMessagesList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-
-  const primaryColor = isDark ? '#F55D69' : '#FF0000';
-
-  const fetchMessages = useCallback(async () => {
-    if (!userToken || !contactId) return;
-    const urlRec = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&wsfunction=core_message_get_messages&moodlewsrestformat=json&useridto=${MY_USER_ID}&useridfrom=${contactId}`;
-    const urlSent = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&wsfunction=core_message_get_messages&moodlewsrestformat=json&useridto=${contactId}&useridfrom=${MY_USER_ID}`;
+    const { contactId, contactName, contactImage } = useLocalSearchParams();
+    const router = useRouter();
+    const { theme, isDark } = useTheme();
+    const { userToken, userId: MY_USER_ID } = useAuth();
     
-    try {
-      const [resRec, resSent] = await Promise.all([fetch(urlRec), fetch(urlSent)]);
-      const dataRec = await resRec.json();
-      const dataSent = await resSent.json();
-      let allMessages = [];
-      if (dataRec.messages) allMessages = [...allMessages, ...dataRec.messages];
-      if (dataSent.messages) allMessages = [...allMessages, ...dataSent.messages];
+    const flatListRef = useRef();
+    const [message, setMessage] = useState('');
+    const [messagesList, setMessagesList] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [sending, setSending] = useState(false);
 
-      if (allMessages.length > 0) {
-        const formatted = allMessages
-          .map(msg => ({
-            id: msg.id.toString(),
-            useridfrom: msg.useridfrom,
-            text: msg.smallmessage.replace(/<[^>]*>?/gm, ''),
-            time: msg.timecreated
-          }))
-          .sort((a, b) => a.time - b.time);
-        setMessagesList(formatted);
-      }
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [userToken, contactId, MY_USER_ID]);
+    const PRIMARY_COLOR = isDark ? '#F55D69' : '#FF0000';
 
-  useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
-  }, [fetchMessages]);
+    const formatTime = (unixTimestamp) => {
+        const date = new Date(unixTimestamp * 1000);
+        let hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const strMinutes = minutes < 10 ? '0' + minutes : minutes;
+        return `${hours}:${strMinutes} ${ampm}`;
+    };
 
-  const sendMessage = async () => {
-    if (!message.trim() || !userToken) return;
-    const tempMessage = message.trim();
-    setMessage('');
-    setSending(true);
-    const url = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&wsfunction=core_message_send_instant_messages&moodlewsrestformat=json&messages[0][touserid]=${contactId}&messages[0][text]=${encodeURIComponent(tempMessage)}`;
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data[0]?.msgid) fetchMessages();
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setSending(false);
-    }
-  };
+    const markMessagesAsRead = useCallback(async () => {
+        if (!userToken || !contactId || !MY_USER_ID) return;
+        try {
+            const url = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&wsfunction=core_message_mark_all_conversation_messages_as_read&moodlewsrestformat=json&userid=${MY_USER_ID}&otheruserid=${contactId}`;
+            await fetch(url);
+        } catch (err) {
+            console.log("Error marking as read:", err);
+        }
+    }, [userToken, contactId, MY_USER_ID]);
 
-  const renderMessage = ({ item }) => {
-    const isMine = item.useridfrom == MY_USER_ID;
+    const fetchMessages = useCallback(async () => {
+        if (!userToken || !contactId || !MY_USER_ID) return;
+        
+        const baseUrl = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&moodlewsrestformat=json&wsfunction=core_message_get_messages`;
+        
+        const urls = [
+            `${baseUrl}&useridto=${MY_USER_ID}&useridfrom=${contactId}&read=0`,
+            `${baseUrl}&useridto=${MY_USER_ID}&useridfrom=${contactId}&read=1`,
+            `${baseUrl}&useridto=${contactId}&useridfrom=${MY_USER_ID}&read=0`,
+            `${baseUrl}&useridto=${contactId}&useridfrom=${MY_USER_ID}&read=1`
+        ];
+
+        try {
+            const responses = await Promise.all(urls.map(u => fetch(u)));
+            const results = await Promise.all(responses.map(r => r.json()));
+            
+            let allMessages = [];
+            results.forEach(data => {
+                if (data?.messages) allMessages = [...allMessages, ...data.messages];
+            });
+
+            const filteredByCurrentChat = allMessages.filter(msg => 
+                (msg.useridfrom == contactId && msg.useridto == MY_USER_ID) ||
+                (msg.useridfrom == MY_USER_ID && msg.useridto == contactId)
+            );
+
+            if (filteredByCurrentChat.length > 0) {
+                const uniqueMessages = Array.from(new Map(filteredByCurrentChat.map(m => [m.id, m])).values());
+                
+                const cleanList = uniqueMessages.map(msg => ({
+                    uniqueKey: msg.id.toString(),
+                    id: msg.id.toString(),
+                    useridfrom: msg.useridfrom,
+                    text: (msg.smallmessage || "").replace(/<[^>]*>?/gm, ''),
+                    time: msg.timecreated
+                })).sort((a, b) => a.time - b.time);
+
+                setMessagesList(cleanList);
+                
+                const hasUnread = allMessages.some(m => m.useridfrom == contactId && !m.timeread);
+                if (hasUnread) {
+                    markMessagesAsRead();
+                }
+            } else {
+                setMessagesList([]);
+            }
+        } catch (err) {
+            console.log("Fetch fail:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [userToken, contactId, MY_USER_ID, markMessagesAsRead]);
+
+    useEffect(() => {
+        setLoading(true);
+        setMessagesList([]);
+        fetchMessages();
+
+        const loop = setInterval(fetchMessages, 4000);
+
+        return () => {
+            clearInterval(loop);
+            setMessagesList([]);
+        };
+    }, [contactId, fetchMessages]);
+
+    const forceScroll = () => {
+        if (messagesList.length > 0) {
+            setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+            }, 300);
+        }
+    };
+
+    useEffect(() => {
+        if (!loading) forceScroll();
+    }, [loading, messagesList.length]);
+
+    const sendMessage = async () => {
+        if (!message.trim() || !userToken || sending) return;
+        const text = message.trim();
+        setMessage('');
+        setSending(true);
+        
+        const url = `${API_URL}webservice/rest/server.php?wstoken=${userToken}&wsfunction=core_message_send_instant_messages&moodlewsrestformat=json&messages[0][touserid]=${contactId}&messages[0][text]=${encodeURIComponent(text)}`;
+        
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data[0]?.msgid) {
+                fetchMessages();
+            }
+        } catch (err) {
+            console.log("Send fail:", err);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const renderMessage = ({ item }) => {
+        const isMine = item.useridfrom == MY_USER_ID;
+        return (
+            <View style={[styles.msgWrapper, isMine ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' }]}>
+                <View style={[styles.msgBubble, { backgroundColor: isMine ? PRIMARY_COLOR : (isDark ? '#262626' : '#F2F2F2') }]}>
+                    <Text style={{ fontSize: 16, color: isMine ? '#fff' : theme.text }}>{item.text}</Text>
+                    <Text style={[styles.timeText, { color: isMine ? 'rgba(255,255,255,0.7)' : theme.textSecondary }]}>
+                        {formatTime(item.time)}
+                    </Text>
+                </View>
+            </View>
+        );
+    };
+
     return (
-      <View style={[styles.msgWrapper, isMine ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' }]}>
-        <View style={[
-          styles.msgBubble, 
-          isMine 
-            ? { backgroundColor: primaryColor, borderBottomRightRadius: 4 } 
-            : { backgroundColor: isDark ? '#262626' : '#F2F2F2', borderBottomLeftRadius: 4 }
-        ]}>
-          <Text style={[styles.msgText, { color: isMine ? '#fff' : theme.text }]}>{item.text}</Text>
+        <View key={contactId} style={{ flex: 1, backgroundColor: theme.background }}>
+            <StatusBar barStyle="light-content" backgroundColor={PRIMARY_COLOR} translucent={false} />
+            <View style={[styles.headerWrapper, { backgroundColor: PRIMARY_COLOR }]}>
+                <SafeAreaView>
+                    <View style={styles.headerContent}>
+                        <TouchableOpacity onPress={() => router.replace('/auth/messages')} style={styles.sideBtn}>
+                            <Ionicons name="arrow-back" size={28} color="white" />
+                        </TouchableOpacity>
+                        <View style={styles.userInfoContainer}>
+                            <Image 
+                                source={{ uri: contactImage || 'https://via.placeholder.com/150' }} 
+                                style={styles.chatAvatar} 
+                            />
+                            <Text style={styles.chatName} numberOfLines={1}>{contactName}</Text>
+                        </View>
+                        <View style={styles.sideBtnPlaceholder} />
+                    </View>
+                </SafeAreaView>
+            </View>
+
+            {loading ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+                </View>
+            ) : (
+                <FlatList
+                    ref={flatListRef}
+                    data={messagesList}
+                    keyExtractor={(item) => item.uniqueKey}
+                    renderItem={renderMessage}
+                    contentContainerStyle={{ padding: 20 }}
+                    onContentSizeChange={forceScroll}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="chatbubbles-outline" size={80} color={isDark ? '#333' : '#E0E0E0'} />
+                            <Text style={{ textAlign: 'center', color: theme.textSecondary, marginTop: 10 }}>No hay mensajes aún.</Text>
+                        </View>
+                    }
+                />
+            )}
+
+            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 90}>
+                <View style={[styles.bottomBar, { backgroundColor: theme.card }]}>
+                    <TextInput
+                        style={[styles.chatInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, borderWidth: 1 }]}
+                        placeholder="Mensaje..."
+                        placeholderTextColor="#999"
+                        value={message}
+                        onChangeText={setMessage}
+                    />
+                    <TouchableOpacity 
+                        style={[styles.sendCircle, { backgroundColor: PRIMARY_COLOR }]} 
+                        onPress={sendMessage} 
+                        disabled={!message.trim() || sending}
+                    >
+                        {sending ? <ActivityIndicator size="small" color="white" /> : <Ionicons name="send" size={20} color="white" />}
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
         </View>
-      </View>
     );
-  };
-
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={primaryColor} translucent={false} />
-      
-      <View style={[styles.header, { backgroundColor: primaryColor }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <Image source={{ uri: contactImage || 'https://via.placeholder.com/150' }} style={styles.avatar} />
-        <View style={styles.headerInfo}>
-          <Text style={styles.chatTitle}>{contactName}</Text>
-          <Text style={styles.status}>En línea</Text>
-        </View>
-      </View>
-
-      {loading ? (
-        <ActivityIndicator size="large" color={primaryColor} style={{ flex: 1 }} />
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messagesList}
-          keyExtractor={(item) => item.id}
-          renderItem={renderMessage}
-          contentContainerStyle={{ padding: 20 }}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        />
-      )}
-
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}>
-        <View style={[styles.inputContainer, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
-          <TextInput
-            style={[styles.chatInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, borderWidth: 1 }]}
-            placeholder="Escribe un mensaje..."
-            placeholderTextColor="#999"
-            value={message}
-            onChangeText={setMessage}
-            multiline={false}
-          />
-          <TouchableOpacity 
-            style={[styles.sendBtn, { backgroundColor: primaryColor }, (!message.trim() || sending) && { opacity: 0.6 }]} 
-            onPress={sendMessage}
-            disabled={!message.trim() || sending}
-          >
-            <Text style={styles.sendText}>Enviar</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 15, 
-    height: Platform.OS === 'ios' ? 70 : 90, 
-    borderBottomLeftRadius: 25, 
-    borderBottomRightRadius: 25, 
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    zIndex: 10
-  },
-  avatar: { width: 45, height: 45, borderRadius: 22.5, marginRight: 12, borderWidth: 1.5, borderColor: '#fff' },
-  headerInfo: { flex: 1 },
-  backBtn: { paddingRight: 10 },
-  backArrow: { fontSize: 28, color: '#fff', fontWeight: 'bold' },
-  chatTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
-  status: { fontSize: 12, color: '#E0E0E0', fontWeight: '500' },
-  msgWrapper: { marginBottom: 15, maxWidth: '80%' },
-  msgBubble: { padding: 15, borderRadius: 20, elevation: 1 },
-  msgText: { fontSize: 15, lineHeight: 21 },
-  inputContainer: { 
-    flexDirection: 'row', 
-    padding: 12, 
-    alignItems: 'center', 
-    paddingBottom: Platform.OS === 'ios' ? 35 : 15,
-    borderTopWidth: 1 
-  },
-  chatInput: { flex: 1, borderRadius: 25, paddingHorizontal: 20, height: 48, fontSize: 15 },
-  sendBtn: { marginLeft: 10, borderRadius: 25, paddingHorizontal: 22, height: 48, justifyContent: 'center', elevation: 3 },
-  sendText: { color: '#fff', fontWeight: 'bold', fontSize: 15 }
+    headerWrapper: { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, elevation: 4 },
+    headerContent: { flexDirection: 'row', alignItems: 'center', height: 60, paddingHorizontal: 10 },
+    userInfoContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 5 },
+    chatName: { color: 'white', fontSize: 17, fontWeight: 'bold', flex: 1, marginLeft: 10 },
+    chatAvatar: { width: 40, height: 40, borderRadius: 20 },
+    sideBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+    sideBtnPlaceholder: { width: 10 },
+    emptyContainer: { marginTop: 50, alignItems: 'center' },
+    msgWrapper: { marginBottom: 15, maxWidth: '85%' },
+    msgBubble: { padding: 12, borderRadius: 18, minWidth: 80 },
+    timeText: { fontSize: 10, marginTop: 4, textAlign: 'right' },
+    bottomBar: { flexDirection: 'row', padding: 10, alignItems: 'center', borderTopWidth: 0.5 },
+    chatInput: { flex: 1, borderRadius: 25, paddingHorizontal: 15, height: 45 },
+    sendCircle: { marginLeft: 8, borderRadius: 25, width: 45, height: 45, justifyContent: 'center', alignItems: 'center' }
 });
 
 export default ChatDetail;

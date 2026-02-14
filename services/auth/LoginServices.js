@@ -10,17 +10,21 @@ async function getUserData(token, username) {
             moodlewsrestformat: 'json',
             wsfunction: functionName,
             field: 'username',
-            values: [username]
+            'values[0]': username 
         }
     });
 
     const userDataArray = userResponse.data;
 
-    if (userDataArray && userDataArray.length > 0 && !userDataArray.exception) {
+    if (Array.isArray(userDataArray) && userDataArray.length > 0) {
         return userDataArray[0];
-    } else {
-        throw new Error("No se pudo obtener el ID de usuario.");
+    } 
+    
+    if (userDataArray.exception) {
+        throw new Error(userDataArray.message);
     }
+
+    throw new Error("USER_NOT_FOUND");
 }
 
 export async function LoginServices(username, password) {
@@ -31,7 +35,7 @@ export async function LoginServices(username, password) {
                 username: username,
                 password: password,
                 service: "moodle_mobile_app"
-            }),
+            }).toString(),
             {
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
             }
@@ -48,12 +52,25 @@ export async function LoginServices(username, password) {
 
         return {
             token: token,
-            userid: userDetails.id,
+            userid: String(userDetails.id),
             username: username,
+            password: password,
             success: true
         };
 
     } catch (error) {
-        throw new Error(error.message || "Error en el login");
+        let cleanMessage = "Ocurrió un error al conectar con el servidor.";
+
+        const errorStr = String(error.message).toLowerCase();
+
+        if (errorStr.includes("invalid login") || errorStr.includes("invalidlogin")) {
+            cleanMessage = "Usuario o contraseña incorrectos. Por favor, verifica tus datos.";
+        } else if (errorStr.includes("user_not_found")) {
+            cleanMessage = "El usuario no existe o no tiene permisos en esta plataforma.";
+        } else if (errorStr.includes("network error")) {
+            cleanMessage = "No hay conexión a internet.";
+        }
+
+        throw new Error(cleanMessage);
     }
 }

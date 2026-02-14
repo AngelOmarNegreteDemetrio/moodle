@@ -31,6 +31,15 @@ export default function NotificationsScreen() {
 
     const PRIMARY_COLOR = isDark ? '#F55D69' : '#FF0000';
 
+    const cleanNotificationMsg = (html) => {
+        if (!html) return "";
+        return html
+            .replace(/<style([\s\S]*?)<\/style>/gi, "")
+            .replace(/<[^>]*>?/gm, "")
+            .replace(/&nbsp;/g, " ")
+            .trim();
+    };
+
     const loadRealNotifications = async () => {
         setLoading(true);
         try {
@@ -42,9 +51,7 @@ export default function NotificationsScreen() {
                 const realAlerts = data.map(notif => ({
                     id: notif.id.toString(),
                     title: notif.subject || t('notifications.default_title'),
-                    msg: notif.fullmessagehtml 
-                        ? notif.fullmessagehtml.replace(/<[^>]*>?/gm, '') 
-                        : notif.smallmessage,
+                    msg: cleanNotificationMsg(notif.fullmessagehtml || notif.smallmessage),
                     type: notif.component.includes('assign') ? 'urgent' : 'info'
                 }));
                 setNotifications(realAlerts);
@@ -81,7 +88,7 @@ export default function NotificationsScreen() {
                     title: event.name,
                     startDate: new Date(event.timestart * 1000),
                     endDate: new Date((event.timestart + (event.timeduration || 3600)) * 1000),
-                    notes: event.description,
+                    notes: event.description ? event.description.replace(/<[^>]*>?/gm, '') : '',
                     location: 'Plataforma Moodle',
                 });
             }

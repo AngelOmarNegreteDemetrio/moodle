@@ -27,12 +27,17 @@
     "profile_title": "PERFIL ACADÉMICO PROFESIONAL",
     "no_phone": "No registrado",
     "summary_title": "Resumen Ejecutivo",
+    "badges_title": "Insignias y Logros",
     "formation_title": "Formación y Competencias",
     "moodle_certified": "CURSO INSTITUCIONAL • CERTIFICADO MOODLE",
     "sync_error": "No se pudo sincronizar el perfil.",
-    "mastery": "Dominio en",
+    "mastery": "Dominio de",
     "training": "En formación",
-    "course_description": "Desarrollo de competencias analíticas y técnicas aplicadas a {{name}}, con enfoque práctico en resolución de problemas e implementación de proyectos."
+    "desc_template_1": "Desarrollo de competencias analíticas y técnicas aplicadas a {{name}}, con un fuerte enfoque práctico en la resolución de problemas reales.",
+    "desc_template_2": "Especialización en {{name}}, fortaleciendo habilidades críticas mediante la implementación de proyectos y metodologías activas.",
+    "desc_template_3": "Capacitación técnica orientada al dominio de {{name}}, integrando conocimientos teóricos con aplicaciones prácticas en entornos profesionales.",
+    "desc_template_4": "Formación integral en {{name}} centrada en la adquisición de herramientas estratégicas y el desarrollo de pensamiento lógico.",
+    "desc_template_5": "Profundización en los fundamentos de {{name}}, facilitando la ejecución de procesos complejos y la gestión eficiente de proyectos."
   },
   "menu": {
     "home": "Inicio",
